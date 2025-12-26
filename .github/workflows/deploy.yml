@@ -1,0 +1,58 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Deploy to Server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PATH: ${{ secrets.SERVER_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            cd ${{ secrets.SERVER_PATH }}
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+            
+            # Build aizkw
+            cd aizkw20251219
+            npm install
+            npm run build
+            cd ..
+            
+            # Build tgmini
+            cd tgmini20251220
+            npm install
+            npm run build
+            cd ..
+            
+            # Build hongbao
+            cd hbwy20251220
+            npm install
+            npm run build
+            cd ..
+            
+            # Restart PM2 services
+            pm2 restart aizkw-frontend || pm2 start "npx serve -s aizkw20251219/dist -l 3001" --name aizkw-frontend
+            pm2 restart tgmini-frontend || pm2 start "npx serve -s tgmini20251220/dist -l 3002" --name tgmini-frontend
+            pm2 restart hongbao-frontend || pm2 start "npx serve -s hbwy20251220/dist -l 3003" --name hongbao-frontend
+            pm2 save
+          ENDSSH
+
