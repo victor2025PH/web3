@@ -212,14 +212,20 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         } catch (ollamaStreamError) {
           // 如果流式响应失败，尝试普通响应
           console.warn('Ollama 流式响应失败，降级到普通响应:', ollamaStreamError);
-          fullContent = await sendOllamaRequest({
-            messages: ollamaMessages,
-            model: 'huihui_ai/qwen2.5-abliterate',
-            options: {
-              temperature: 0.9,
-              top_p: 0.95,
-            }
-          });
+          try {
+            fullContent = await sendOllamaRequest({
+              messages: ollamaMessages,
+              model: 'huihui_ai/qwen2.5-abliterate',
+              options: {
+                temperature: 0.9,
+                top_p: 0.95,
+              }
+            });
+          } catch (ollamaError) {
+            // Ollama连接失败，给出清晰的错误提示
+            console.error('Ollama 连接失败:', ollamaError);
+            throw ollamaError; // 重新抛出错误，让外层catch处理
+          }
         }
       } else {
         // --- 使用远程 API 模式 ---
@@ -356,6 +362,51 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } catch (error) {
       console.error("AI Error:", error);
       setIsTyping(false);
+      
+      // 检查是否是Ollama连接错误
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isOllamaError = aiMode === 'ollama' && (
+        errorMessage.includes('Ollama') || 
+        errorMessage.includes('Failed to fetch') || 
+        errorMessage.includes('网络错误') ||
+        errorMessage.includes('连接') ||
+        errorMessage.includes('fetch')
+      );
+      
+      if (isOllamaError) {
+        // Ollama连接失败的友好提示
+        const ollamaErrorMessage = `❌ **本地 Ollama 连接失败**
+
+无法连接到本地的 Ollama 服务 (http://localhost:11434)
+
+**请检查以下事项：**
+
+1. ✅ **确保已安装 Ollama**
+   - 访问 https://ollama.ai 下载并安装
+   
+2. ✅ **确保 Ollama 服务正在运行**
+   - Windows: 检查 Ollama 是否在后台运行
+   - 或在终端运行: \`ollama serve\`
+   
+3. ✅ **确保模型已下载**
+   - 运行: \`ollama pull huihui_ai/qwen2.5-abliterate\`
+   
+4. ✅ **检查端口 11434 是否被占用**
+   - 默认端口: 11434
+   
+5. ✅ **如果使用自定义端口**
+   - 需要配置环境变量 \`VITE_OLLAMA_BASE_URL\`
+
+**快速测试：**
+打开浏览器访问: http://localhost:11434/api/tags
+如果能看到JSON响应，说明Ollama服务正常运行。
+
+如果问题仍然存在，请切换到"远程AI"模式使用云端服务。`;
+
+        addMessage('ai', ollamaErrorMessage);
+        setSuggestions(['切换到远程AI模式', '重试连接', '查看帮助']);
+        return;
+      }
       
       // 如果代理 API 失败，降级到模拟模式
       let rawResponse = FALLBACK_RESPONSES.default;
