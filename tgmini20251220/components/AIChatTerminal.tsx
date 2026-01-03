@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Activity, ChevronRight, Sparkles, Terminal } from 'lucide-react';
+import { X, Send, Bot, Activity, ChevronRight, Sparkles, Terminal, Server, Zap } from 'lucide-react';
 import { useAIChat, Message } from '../contexts/AIChatContext';
 
 const parseInline = (text: string) => {
@@ -135,7 +135,7 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
 });
 
 export const AIChatTerminal: React.FC = () => {
-  const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions } = useAIChat();
+  const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode } = useAIChat();
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
@@ -379,12 +379,39 @@ export const AIChatTerminal: React.FC = () => {
                    </div>
                 </div>
               </div>
-              <button 
-                onClick={closeChat}
-                className="p-2 hover:bg-white/10 rounded text-zinc-400 hover:text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* AI Mode Toggle */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAiMode(aiMode === 'remote' ? 'ollama' : 'remote');
+                  }}
+                  className={`relative flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all ${
+                    aiMode === 'ollama'
+                      ? 'bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30'
+                      : 'bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
+                  }`}
+                  title={aiMode === 'ollama' ? '切换到远程API模式' : '切换到本地Ollama模式（无审核）'}
+                >
+                  {aiMode === 'ollama' ? (
+                    <>
+                      <Server className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-mono font-bold uppercase">本地AI</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-mono font-bold uppercase">远程AI</span>
+                    </>
+                  )}
+                </button>
+                <button 
+                  onClick={closeChat}
+                  className="p-2 hover:bg-white/10 rounded text-zinc-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div 
               ref={scrollRef}
