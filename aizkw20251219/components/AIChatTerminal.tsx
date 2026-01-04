@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Cpu, Activity, ChevronRight, Sparkles, Command, Terminal, Server, Zap } from 'lucide-react';
+import { X, Send, Bot, Cpu, Activity, ChevronRight, Sparkles, Command, Terminal, Server, Zap, Maximize2, Minimize2 } from 'lucide-react';
 import { useAIChat, Message } from '../contexts/AIChatContext';
 
 // --- Helper: Inline Text Parser ---
@@ -178,6 +178,11 @@ export const AIChatTerminal: React.FC = () => {
   const [beakStyle, setBeakStyle] = useState<React.CSSProperties>({});
   const [isFixed, setIsFixed] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
+  
+  // Resize state
+  const [isResizing, setIsResizing] = useState(false);
+  const [customSize, setCustomSize] = useState<{ width: number; height: number } | null>(null);
+  const resizeRef = useRef<HTMLDivElement>(null);
 
   // Filter suggestions based on input
   const filteredSuggestions = useMemo(() => {
@@ -255,7 +260,7 @@ export const AIChatTerminal: React.FC = () => {
     else if (isWideScreen && spaceLeft >= MIN_W) placement = 'left';
     else placement = spaceBottom > spaceTop ? 'bottom' : 'top';
 
-    let top = 0, left = 0, width = IDEAL_W, height = IDEAL_H;
+    let top = 0, left = 0, width = customSize?.width || IDEAL_W, height = customSize?.height || IDEAL_H;
     let beakS: React.CSSProperties = {};
     const triggerCenterX = triggerRect.left + triggerRect.width / 2;
     const triggerCenterY = triggerRect.top + triggerRect.height / 2;
