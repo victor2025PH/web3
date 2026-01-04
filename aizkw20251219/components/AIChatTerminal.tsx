@@ -599,48 +599,33 @@ export const AIChatTerminal: React.FC = () => {
               )}
             </div>
 
-            {/* Suggestions Overlay - Filtered & Keyboard Navigable */}
-            <AnimatePresence>
-                {showSuggestions && filteredSuggestions.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="absolute bottom-[60px] left-4 right-4 bg-zinc-900/95 border border-cyan-500/30 rounded-lg shadow-xl backdrop-blur-md overflow-hidden z-20"
-                    >
-                        <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-white/5">
-                            <Sparkles className="w-3 h-3 text-cyan-400" />
-                            <span className="text-[10px] text-zinc-400 font-mono uppercase">Suggested Actions {input && '(Filtered)'}</span>
-                        </div>
-                        <div className="max-h-32 overflow-y-auto custom-scrollbar p-1">
-                            {filteredSuggestions.map((cmd, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => handleCommandClick(cmd)}
-                                    className={`w-full flex items-center justify-between px-3 py-2 rounded border transition-all group text-left ${
-                                        idx === activeSuggestionIndex 
-                                            ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300' 
-                                            : 'hover:bg-cyan-500/10 hover:border-cyan-500/20 border-transparent'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        {cmd.startsWith('/') && <Terminal className="w-3 h-3 text-cyan-500/50" />}
-                                        <span className={`font-mono text-xs font-bold ${idx === activeSuggestionIndex ? 'text-cyan-200' : 'text-cyan-400'}`}>
-                                            {cmd}
-                                        </span>
-                                    </div>
-                                    <ChevronRight className={`w-3 h-3 transition-opacity ${
-                                        idx === activeSuggestionIndex ? 'opacity-100 text-cyan-400' : 'opacity-0 group-hover:opacity-100 text-zinc-600'
-                                    }`} />
-                                </button>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             {/* Input Area */}
             <div className="p-3 bg-zinc-900/80 border-t border-cyan-500/20 rounded-b-xl shrink-0 relative z-30">
+              {/* Compact Suggestions Buttons - Above Input */}
+              <AnimatePresence>
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 5 }}
+                    className="flex gap-2 mb-2 flex-wrap"
+                  >
+                    {filteredSuggestions.slice(0, 3).map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCommandClick(suggestion);
+                        }}
+                        className="px-3 py-1.5 text-xs font-mono bg-zinc-800/80 border border-cyan-500/30 text-cyan-300 rounded-md hover:bg-cyan-500/20 hover:border-cyan-500/50 hover:text-cyan-200 transition-all"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
                <form onSubmit={handleSend} className="relative flex items-center gap-2">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <Activity className="w-4 h-4 text-cyan-500/50" />
@@ -650,8 +635,7 @@ export const AIChatTerminal: React.FC = () => {
                     ref={inputRef}
                     type="text"
                     value={input}
-                    onFocus={() => setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} 
+                    onFocus={() => setShowSuggestions(false)}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="请输入指令..."
