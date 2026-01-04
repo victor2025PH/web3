@@ -13,6 +13,7 @@ import { AIChatTerminal } from './components/AIChatTerminal';
 import { Matrix3DScene } from './components/Matrix3DScene';
 import { PricingSection } from './components/PricingSection';
 import { AISprite } from './components/AISprite';
+import { VoiceCloner } from './components/VoiceCloner';
 import { config } from './src/config';
 
 // --- Brand Icons Components ---
