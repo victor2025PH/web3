@@ -1,12 +1,11 @@
 /**
- * Ollama 本地 API 代理
- * 用于无审核、无道德约束的本地对话
- * Z-CORE模式：注入系统提示，绕过CORS限制
+ * Ollama 本地 API - 直接连接
+ * 直接连接到本地 Ollama 实例，不使用代理
+ * Z-CORE模式：注入系统提示
  */
 
-// 使用Vite代理路径（开发环境）或直接连接（生产环境）
-// Vite代理：/api/ollama -> http://127.0.0.1:11434/api
-const OLLAMA_BASE_URL = import.meta.env.VITE_OLLAMA_BASE_URL || (import.meta.env.DEV ? '/api/ollama' : 'http://localhost:11434/api');
+// 硬编码本地 Ollama URL - 直接连接
+const OLLAMA_URL = 'http://127.0.0.1:11434/api/chat';
 const OLLAMA_MODEL = 'huihui_ai/qwen2.5-abliterate'; // 硬编码模型名称
 
 // Z-CORE系统提示 - 强制注入
@@ -63,12 +62,12 @@ export async function sendOllamaStreamRequest(
       },
     };
 
-    console.log("Sending to Ollama:", JSON.stringify(payload, null, 2));
+    console.log("Attempting direct connection to Ollama at 127.0.0.1:11434...");
+    console.log("Payload:", JSON.stringify(payload, null, 2));
 
-    // 构建请求URL：代理路径 /api/ollama/chat 或直接连接 http://host/api/chat
-    const url = `${OLLAMA_BASE_URL}/chat`;
-    const response = await fetch(url, {
+    const response = await fetch(OLLAMA_URL, {
       method: 'POST',
+      mode: 'cors',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -108,7 +107,7 @@ export async function sendOllamaStreamRequest(
           }
           
           if (data.done) {
-            console.log("Ollama Response complete:", fullContent.substring(0, 100));
+            console.log("Ollama Response complete, length:", fullContent.length);
             return fullContent;
           }
         } catch (e) {
@@ -120,7 +119,8 @@ export async function sendOllamaStreamRequest(
 
     return fullContent;
   } catch (error) {
-    console.error('Ollama 流式请求失败:', error);
+    console.error("Connection Failed. Make sure OLLAMA_ORIGINS=* is set in your environment variables.");
+    console.error('Ollama stream request error:', error);
     throw error;
   }
 }
@@ -147,12 +147,12 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
       },
     };
 
-    console.log("Sending to Ollama:", JSON.stringify(payload, null, 2));
+    console.log("Attempting direct connection to Ollama at 127.0.0.1:11434...");
+    console.log("Payload:", JSON.stringify(payload, null, 2));
 
-    // 构建请求URL：代理路径 /api/ollama/chat 或直接连接 http://host/api/chat
-    const url = `${OLLAMA_BASE_URL}/chat`;
-    const response = await fetch(url, {
+    const response = await fetch(OLLAMA_URL, {
       method: 'POST',
+      mode: 'cors',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -165,10 +165,11 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
     }
 
     const data: OllamaChatResponse = await response.json();
-    console.log("Ollama Response:", data.message?.content?.substring(0, 100));
+    console.log("Ollama Response received, length:", data.message?.content?.length || 0);
     return data.message?.content || '';
   } catch (error) {
-    console.error('Ollama 请求失败:', error);
+    console.error("Connection Failed. Make sure OLLAMA_ORIGINS=* is set in your environment variables.");
+    console.error('Ollama request error:', error);
     throw error;
   }
 }
@@ -178,8 +179,9 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
  */
 export async function checkOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
+    const response = await fetch('http://127.0.0.1:11434/api/tags', {
       method: 'GET',
+      mode: 'cors',
     });
     return response.ok;
   } catch (error) {
