@@ -6,7 +6,7 @@ import { Hero } from './components/Hero';
 import { Background } from './components/Background';
 import { Section } from './components/Section';
 import { Button } from './components/ui/Button';
-import { Smartphone, Mic, MessageSquare, Phone, Server, Radio, MessagesSquare, Quote, Shield, Cpu, Globe, Zap, Calendar, Mail, ArrowLeft, Linkedin, Twitter, X, BarChart3, Users, Clock, Activity, ArrowDown, Send, MessageCircle, Facebook, CreditCard, DollarSign, PenTool } from 'lucide-react';
+import { Smartphone, Mic, MessageSquare, Phone, Server, Radio, MessagesSquare, Quote, Shield, Cpu, Globe, Zap, Calendar, Mail, ArrowLeft, Linkedin, Twitter, X, BarChart3, Users, Clock, Activity, ArrowDown, Send, MessageCircle, Facebook, CreditCard, DollarSign, PenTool, Video, Volume2, Lock, Eye, Database } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
 import { AIChatProvider, useAIChat } from './contexts/AIChatContext';
 import { AIChatTerminal } from './components/AIChatTerminal';
@@ -636,7 +636,7 @@ const LandingContent: React.FC = () => {
           </div>
         </Section>
 
-        {/* Section 2: Matrix (System Visualizer) - MOVED UP */}
+        {/* Section 3: Matrix (System Visualizer) - MOVED UP */}
         <Section 
             id="matrix" 
             title={t('matrix.title')} 
