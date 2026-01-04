@@ -5,6 +5,7 @@
  */
 
 // 使用Vite代理路径（开发环境）或直接连接（生产环境）
+// Vite代理：/api/ollama -> http://127.0.0.1:11434/api
 const OLLAMA_BASE_URL = import.meta.env.VITE_OLLAMA_BASE_URL || (import.meta.env.DEV ? '/api/ollama' : 'http://localhost:11434/api');
 const OLLAMA_MODEL = 'huihui_ai/qwen2.5-abliterate'; // 硬编码模型名称
 
@@ -64,7 +65,8 @@ export async function sendOllamaStreamRequest(
 
     console.log("Sending to Ollama:", JSON.stringify(payload, null, 2));
 
-    const url = OLLAMA_BASE_URL.startsWith('/') ? `${OLLAMA_BASE_URL}/chat` : `${OLLAMA_BASE_URL}/chat`;
+    // 构建请求URL：代理路径 /api/ollama/chat 或直接连接 http://host/api/chat
+    const url = `${OLLAMA_BASE_URL}/chat`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -147,7 +149,8 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
 
     console.log("Sending to Ollama:", JSON.stringify(payload, null, 2));
 
-    const url = OLLAMA_BASE_URL.startsWith('/') ? `${OLLAMA_BASE_URL}/chat` : `${OLLAMA_BASE_URL}/chat`;
+    // 构建请求URL：代理路径 /api/ollama/chat 或直接连接 http://host/api/chat
+    const url = `${OLLAMA_BASE_URL}/chat`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {
