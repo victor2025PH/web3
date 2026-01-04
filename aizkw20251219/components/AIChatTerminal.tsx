@@ -166,8 +166,15 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
 export const AIChatTerminal: React.FC = () => {
   const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode } = useAIChat();
   const [input, setInput] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true); // 默认显示，点击输入框后隐藏
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  
+  // 当有新的suggestions时显示
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  }, [suggestions]);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -198,6 +205,13 @@ export const AIChatTerminal: React.FC = () => {
   useEffect(() => {
     setActiveSuggestionIndex(-1);
   }, [filteredSuggestions]);
+  
+  // 当有新的suggestions时显示
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  }, [suggestions]);
 
   // --- Advanced Positioning Logic ---
   useLayoutEffect(() => {
