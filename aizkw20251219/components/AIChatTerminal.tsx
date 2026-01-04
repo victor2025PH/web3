@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Cpu, Activity, ChevronRight, Sparkles, Command, Terminal, Server, Zap, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Send, Bot, Cpu, Activity, ChevronRight, Sparkles, Command, Terminal, Server, Zap, Maximize2, Minimize2, Upload, Mic, Square } from 'lucide-react';
 import { useAIChat, Message } from '../contexts/AIChatContext';
+import { useVoiceCloner } from '../contexts/VoiceClonerContext';
+import { AudioRecorder } from '../utils/audioRecorder';
 
 // --- Helper: Inline Text Parser ---
 const parseInline = (text: string) => {
@@ -165,9 +167,16 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
 
 export const AIChatTerminal: React.FC = () => {
   const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode } = useAIChat();
+  const { setReferenceAudio } = useVoiceCloner();
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true); // 默认显示，点击输入框后隐藏
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // 当有新的suggestions时显示
   useEffect(() => {
@@ -625,6 +634,70 @@ export const AIChatTerminal: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* 语音克隆工具栏 */}
+              <div className="flex gap-2 mb-2">
+                {/* 上传文件按钮 */}
+                <label className="relative">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".wav,audio/wav"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={isUploading || isRecording}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading || isRecording}
+                    className="px-3 py-1.5 text-xs font-mono bg-zinc-800/80 border border-cyan-500/30 text-cyan-300 rounded-md hover:bg-cyan-500/20 hover:border-cyan-500/50 hover:text-cyan-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    title="上传 WAV 音频文件作为参考"
+                  >
+                    {isUploading ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        >
+                          <Upload className="w-3 h-3" />
+                        </motion.div>
+                        上传中...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3 h-3" />
+                        上传音频
+                      </>
+                    )}
+                  </button>
+                </label>
+
+                {/* 麦克风录音按钮 */}
+                <button
+                  type="button"
+                  onClick={isRecording ? handleStopRecording : handleStartRecording}
+                  disabled={isUploading}
+                  className={`px-3 py-1.5 text-xs font-mono border rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 ${
+                    isRecording
+                      ? 'bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30'
+                      : 'bg-zinc-800/80 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-500/50 hover:text-cyan-200'
+                  }`}
+                  title={isRecording ? '停止录音' : '开始录音作为参考音频'}
+                >
+                  {isRecording ? (
+                    <>
+                      <Square className="w-3 h-3" />
+                      <span className="font-mono">{formatTime(recordingTime)}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3 h-3" />
+                      录音
+                    </>
+                  )}
+                </button>
+              </div>
               
                <form onSubmit={handleSend} className="relative flex items-center gap-2">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1">

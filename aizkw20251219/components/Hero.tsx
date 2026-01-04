@@ -211,10 +211,15 @@ export const Hero: React.FC = () => {
           </span>
         </h1>
 
-        {/* Subtitle */}
-        <h2 className="text-lg md:text-xl lg:text-2xl text-cyan-500 font-mono mb-6 tracking-wide uppercase">
+        {/* Subtitle - First Line */}
+        <h2 className="text-lg md:text-xl lg:text-2xl text-cyan-500 font-mono mb-3 tracking-wide uppercase">
           {t('hero.subtitle')}
         </h2>
+        
+        {/* Subtitle - Second Line */}
+        <h3 className="text-base md:text-lg lg:text-xl text-purple-400 font-mono mb-6 tracking-wide">
+          {t('hero.subtitle_2')}
+        </h3>
 
         {/* Description */}
         <p className="max-w-3xl mx-auto text-lg md:text-xl text-zinc-400 mb-10 font-light leading-relaxed">
