@@ -340,7 +340,7 @@ export const AIChatTerminal: React.FC = () => {
     if (!isResizing || isMobileLayout) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isFixed || !chatStyle.left || !chatStyle.top) return;
+      if (!isFixed || typeof chatStyle.left !== 'number' || typeof chatStyle.top !== 'number') return;
       
       const container = containerRef.current;
       if (!container) return;
@@ -349,7 +349,8 @@ export const AIChatTerminal: React.FC = () => {
       const newWidth = Math.max(300, Math.min(800, e.clientX - rect.left));
       const newHeight = Math.max(300, Math.min(window.innerHeight - 40, e.clientY - rect.top));
 
-      setCustomSize({ width: newWidth, height: newHeight });
+      const newSize = { width: newWidth, height: newHeight };
+      setCustomSize(newSize);
       
       setChatStyle(prev => ({
         ...prev,
@@ -360,13 +361,7 @@ export const AIChatTerminal: React.FC = () => {
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      if (customSize) {
-        try {
-          localStorage.setItem('ai_chat_window_size', JSON.stringify(customSize));
-        } catch (error) {
-          console.warn('Failed to save window size:', error);
-        }
-      }
+      // Save size will be handled by the dependency array in this useEffect
     };
 
     document.addEventListener('mousemove', handleMouseMove);
