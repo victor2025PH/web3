@@ -4,8 +4,8 @@
  * Z-CORE模式：注入系统提示
  */
 
-// 硬编码本地 Ollama URL - 直接连接
-const OLLAMA_URL = 'http://127.0.0.1:11434/api/chat';
+// Cloudflare Tunnel URL - 公共安全访问
+const OLLAMA_URL = 'https://spokesman-authorized-trunk-techno.trycloudflare.com/api/chat';
 const OLLAMA_MODEL = 'huihui_ai/qwen2.5-abliterate'; // 硬编码模型名称
 
 // Z-CORE系统提示 - 强制注入
@@ -62,7 +62,7 @@ export async function sendOllamaStreamRequest(
       },
     };
 
-    console.log("Attempting direct connection to Ollama at 127.0.0.1:11434...");
+    console.log("Attempting connection to Ollama via Cloudflare Tunnel...");
     console.log("Payload:", JSON.stringify(payload, null, 2));
 
     const response = await fetch(OLLAMA_URL, {
@@ -119,7 +119,7 @@ export async function sendOllamaStreamRequest(
 
     return fullContent;
   } catch (error) {
-    console.error("Connection Failed. Make sure OLLAMA_ORIGINS=* is set in your environment variables.");
+    console.error("Connection Failed. Check Cloudflare Tunnel status and Ollama service.");
     console.error('Ollama stream request error:', error);
     throw error;
   }
@@ -147,7 +147,7 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
       },
     };
 
-    console.log("Attempting direct connection to Ollama at 127.0.0.1:11434...");
+    console.log("Attempting connection to Ollama via Cloudflare Tunnel...");
     console.log("Payload:", JSON.stringify(payload, null, 2));
 
     const response = await fetch(OLLAMA_URL, {
@@ -168,7 +168,7 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
     console.log("Ollama Response received, length:", data.message?.content?.length || 0);
     return data.message?.content || '';
   } catch (error) {
-    console.error("Connection Failed. Make sure OLLAMA_ORIGINS=* is set in your environment variables.");
+    console.error("Connection Failed. Check Cloudflare Tunnel status and Ollama service.");
     console.error('Ollama request error:', error);
     throw error;
   }
@@ -179,7 +179,7 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
  */
 export async function checkOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch('http://127.0.0.1:11434/api/tags', {
+    const response = await fetch('https://spokesman-authorized-trunk-techno.trycloudflare.com/api/tags', {
       method: 'GET',
       mode: 'cors',
     });
