@@ -8,6 +8,21 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api/ollama': {
+            target: 'http://127.0.0.1:11434',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api\/ollama/, '/api'),
+            configure: (proxy, _options) => {
+              proxy.on('error', (err, _req, _res) => {
+                console.log('Ollama proxy error', err);
+              });
+              proxy.on('proxyReq', (proxyReq, req, _res) => {
+                console.log('Proxying to Ollama:', req.url);
+              });
+            },
+          },
+        },
       },
       plugins: [react()],
       define: {
