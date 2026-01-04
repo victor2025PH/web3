@@ -975,12 +975,14 @@ const LandingContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AIChatProvider>
-      <HashRouter>
-        <Routes>
-          <Route path="/" element={<LandingContent />} />
-          <Route path="/system/:id" element={<SystemDetails />} />
-        </Routes>
-      </HashRouter>
+      <VoiceClonerProvider>
+        <HashRouter>
+          <Routes>
+            <Route path="/" element={<LandingContent />} />
+            <Route path="/system/:id" element={<SystemDetails />} />
+          </Routes>
+        </HashRouter>
+      </VoiceClonerProvider>
     </AIChatProvider>
   );
 };
