@@ -319,7 +319,64 @@ export const AIChatTerminal: React.FC = () => {
     });
     setBeakStyle(beakS);
 
-  }, [isOpen, triggerRect]);
+  }, [isOpen, triggerRect, customSize]);
+
+  // Load saved window size from localStorage
+  useEffect(() => {
+    if (!isOpen || isMobileLayout) return;
+    try {
+      const saved = localStorage.getItem('ai_chat_window_size');
+      if (saved) {
+        const { width, height } = JSON.parse(saved);
+        setCustomSize({ width, height });
+      }
+    } catch (error) {
+      console.warn('Failed to load window size:', error);
+    }
+  }, [isOpen, isMobileLayout]);
+
+  // Handle resize mouse events
+  useEffect(() => {
+    if (!isResizing || isMobileLayout) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isFixed || !chatStyle.left || !chatStyle.top) return;
+      
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const newWidth = Math.max(300, Math.min(800, e.clientX - rect.left));
+      const newHeight = Math.max(300, Math.min(window.innerHeight - 40, e.clientY - rect.top));
+
+      setCustomSize({ width: newWidth, height: newHeight });
+      
+      setChatStyle(prev => ({
+        ...prev,
+        width: newWidth,
+        height: newHeight,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      if (customSize) {
+        try {
+          localStorage.setItem('ai_chat_window_size', JSON.stringify(customSize));
+        } catch (error) {
+          console.warn('Failed to save window size:', error);
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, isFixed, isMobileLayout, chatStyle.left, chatStyle.top, customSize]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -602,6 +659,25 @@ export const AIChatTerminal: React.FC = () => {
                   </button>
                </form>
             </div>
+
+            {/* Resize Handle - Only show on desktop fixed mode */}
+            {isFixed && !isMobileLayout && (
+              <div
+                ref={resizeRef}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsResizing(true);
+                }}
+                className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize group/resize"
+                style={{ 
+                  cursor: 'nwse-resize',
+                  backgroundImage: 'linear-gradient(135deg, transparent 0%, transparent 40%, rgba(6,182,212,0.3) 40%, rgba(6,182,212,0.3) 45%, transparent 45%, transparent 55%, rgba(6,182,212,0.3) 55%, rgba(6,182,212,0.3) 60%, transparent 60%)'
+                }}
+              >
+                <div className="absolute bottom-1 right-1 w-3 h-3 border-r-2 border-b-2 border-cyan-500/30 group-hover/resize:border-cyan-500/60 transition-colors" />
+              </div>
+            )}
           </motion.div>
         </div>
         </>
