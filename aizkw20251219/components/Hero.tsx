@@ -222,7 +222,7 @@ export const Hero: React.FC = () => {
         </h3>
 
         {/* Description */}
-        <p className="max-w-3xl mx-auto text-sm md:text-base text-zinc-300 mb-10 font-normal leading-relaxed tracking-wide">
+        <p className="max-w-3xl mx-auto text-sm md:text-base text-zinc-200 mb-10 font-normal leading-relaxed tracking-wide break-words">
           {t('hero.description')}
         </p>
 
