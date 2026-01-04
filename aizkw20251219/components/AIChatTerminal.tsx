@@ -432,6 +432,113 @@ export const AIChatTerminal: React.FC = () => {
     }
   };
 
+  // 格式化时间（秒转换为 MM:SS）
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 处理文件上传
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 验证文件类型
+    if (!file.name.toLowerCase().endsWith('.wav')) {
+      alert('请上传 WAV 格式的音频文件');
+      return;
+    }
+
+    // 验证文件大小（10MB）
+    if (file.size > 10 * 1024 * 1024) {
+      alert('文件大小不能超过 10MB');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // 将文件转换为 Blob 并设置到 VoiceCloner Context
+      const blob = new Blob([file], { type: 'audio/wav' });
+      setReferenceAudio(blob, 'upload');
+      
+      // 可选：读取文件名作为提示
+      console.log('音频文件已上传:', file.name);
+    } catch (error) {
+      console.error('文件上传失败:', error);
+      alert('文件上传失败，请重试');
+    } finally {
+      setIsUploading(false);
+      // 清空文件输入，以便可以再次选择同一个文件
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // 开始录音
+  const handleStartRecording = async () => {
+    try {
+      const recorder = new AudioRecorder({
+        onStop: (blob) => {
+          setReferenceAudio(blob, 'record');
+          setIsRecording(false);
+          setRecordingTime(0);
+          if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+            recordingTimerRef.current = null;
+          }
+        },
+        onError: (error) => {
+          alert(error.message);
+          setIsRecording(false);
+          setRecordingTime(0);
+          if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+            recordingTimerRef.current = null;
+          }
+        },
+      });
+
+      audioRecorderRef.current = recorder;
+      await recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      // 开始计时
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (error) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('录音启动失败');
+      }
+    }
+  };
+
+  // 停止录音
+  const handleStopRecording = () => {
+    if (audioRecorderRef.current) {
+      audioRecorderRef.current.stop();
+      audioRecorderRef.current = null;
+    }
+  };
+
+  // 清理录音资源
+  useEffect(() => {
+    return () => {
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.dispose();
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions || filteredSuggestions.length === 0) return;
 
