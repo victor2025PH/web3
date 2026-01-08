@@ -27,7 +27,7 @@ export const voiceConfig = {
   // - Cloudflare Tunnel: 'https://your-tunnel-url.trycloudflare.com'
   // - 本地服务器: 'http://localhost:9880'
   // - 远程服务器: 'https://your-domain.com'
-  apiBaseUrl: 'http://127.0.0.1:9880', // GPT-SoVITS API 地址（本地服务器）
+  apiBaseUrl: 'https://represents-supplier-river-competitions.trycloudflare.com', // GPT-SoVITS API 地址（Cloudflare Tunnel）
   
   // 固定参考音频路径（服务器上的路径，仅当使用 GET 请求时）
   // 如果通过网页上传音频，此路径不会被使用
