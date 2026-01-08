@@ -849,7 +849,7 @@ export const AIChatTerminal: React.FC = () => {
 
             {/* Header */}
             <div 
-              className="flex items-center justify-between px-4 py-3 border-b border-cyan-500/20 bg-zinc-900/50 rounded-t-xl shrink-0 cursor-move select-none"
+              className="flex items-center justify-between px-4 py-2.5 border-b border-cyan-500/20 bg-gradient-to-r from-zinc-900/80 via-zinc-900/60 to-zinc-900/80 rounded-t-xl shrink-0 cursor-move select-none"
               onMouseDown={(e) => {
                 if (isMobileLayout) return;
                 e.preventDefault();
@@ -864,28 +864,58 @@ export const AIChatTerminal: React.FC = () => {
               }}
               style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
             >
-              <div className="flex items-center gap-3">
-                <div className="relative w-8 h-8 flex items-center justify-center">
-                    <div className="absolute inset-0 border border-cyan-500/50 rounded-full animate-[spin_4s_linear_infinite]" />
-                    <img 
-                      src="/logo.png" 
-                      alt="Logo"
-                      className="w-6 h-6 object-contain relative z-10"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                    <Bot className="absolute w-4 h-4 text-cyan-500 z-0" />
+              {/* Left: Logo & Title - Single Line */}
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <div className="relative w-7 h-7 flex items-center justify-center flex-shrink-0">
+                  <div className="absolute inset-0 border border-cyan-500/50 rounded-full animate-[spin_4s_linear_infinite]" />
+                  <img 
+                    src="/logo.png" 
+                    alt="Logo"
+                    className="w-5 h-5 object-contain relative z-10"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                  <Bot className="absolute w-3.5 h-3.5 text-cyan-500 z-0" />
                 </div>
-                <div>
-                   <h3 className="text-xs font-mono font-bold text-cyan-400 tracking-widest uppercase flex items-center gap-2">
-                       AI 智控王 <span className="text-zinc-500 text-[10px]">// CORE</span>
-                   </h3>
-                   <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                      <span className="text-[10px] text-zinc-500 font-mono">NEURAL CONNECTION</span>
-                   </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-mono font-bold text-cyan-400 tracking-wider uppercase whitespace-nowrap">
+                    AI 智控王
+                  </h3>
+                  <span className="text-[10px] text-zinc-500 font-mono">//</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    <span className="text-[10px] text-zinc-500 font-mono uppercase">CORE</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Center: Mode Buttons */}
+              <div className="flex items-center gap-1.5 flex-1 justify-center">
+                {/* AI Mode Toggle */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAiMode(aiMode === 'remote' ? 'ollama' : 'remote');
+                  }}
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-all duration-200 ${
+                    aiMode === 'ollama'
+                      ? 'bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30 shadow-[0_0_8px_rgba(239,68,68,0.3)]'
+                      : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
+                  }`}
+                  title={aiMode === 'ollama' ? '切换到远程API模式' : '切换到本地Ollama模式（无审核）'}
+                >
+                  {aiMode === 'ollama' ? (
+                    <>
+                      <Server className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-mono font-semibold uppercase tracking-wide">本地AI</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-mono font-semibold uppercase tracking-wide">远程AI</span>
+                    </>
+                  )}
+                </button>
+                
                 {/* 语音对话模式切换 */}
                 <button
                   onClick={(e) => {
@@ -900,11 +930,11 @@ export const AIChatTerminal: React.FC = () => {
                     }
                     setIsVoiceChatMode(!isVoiceChatMode);
                   }}
-                  className={`relative flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all ${
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-all duration-200 ${
                     isVoiceChatMode
-                      ? 'bg-purple-500/20 border-purple-500/50 text-purple-400 hover:bg-purple-500/30'
+                      ? 'bg-purple-500/20 border-purple-500/50 text-purple-400 hover:bg-purple-500/30 shadow-[0_0_8px_rgba(168,85,247,0.3)]'
                       : referenceAudio && voiceConfig.apiBaseUrl
-                      ? 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-300'
+                      ? 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-300 hover:border-zinc-600/50'
                       : 'bg-zinc-900/50 border-zinc-800/50 text-zinc-600 cursor-not-allowed opacity-50'
                   }`}
                   title={
@@ -920,43 +950,23 @@ export const AIChatTerminal: React.FC = () => {
                   {isVoiceChatMode ? (
                     <>
                       <Volume2 className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-mono font-bold uppercase">语音对话</span>
+                      <span className="text-[10px] font-mono font-semibold uppercase tracking-wide">语音对话</span>
                     </>
                   ) : (
                     <>
                       <VolumeX className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-mono font-bold uppercase">文字对话</span>
+                      <span className="text-[10px] font-mono font-semibold uppercase tracking-wide">文字对话</span>
                     </>
                   )}
                 </button>
-                {/* AI Mode Toggle */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAiMode(aiMode === 'remote' ? 'ollama' : 'remote');
-                  }}
-                  className={`relative flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all ${
-                    aiMode === 'ollama'
-                      ? 'bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30'
-                      : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
-                  }`}
-                  title={aiMode === 'ollama' ? '切换到远程API模式' : '切换到本地Ollama模式（无审核）'}
-                >
-                  {aiMode === 'ollama' ? (
-                    <>
-                      <Server className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-mono font-bold uppercase">本地AI</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-mono font-bold uppercase">远程AI</span>
-                    </>
-                  )}
-                </button>
+              </div>
+
+              {/* Right: Close Button */}
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <button 
                   onClick={closeChat}
-                  className="p-2 hover:bg-white/10 rounded text-zinc-400 hover:text-white transition-colors"
+                  className="p-1.5 hover:bg-red-500/20 rounded-md text-zinc-400 hover:text-red-400 transition-all duration-200 hover:border border-red-500/30"
+                  title="关闭"
                 >
                   <X className="w-4 h-4" />
                 </button>
