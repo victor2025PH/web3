@@ -106,6 +106,7 @@ export class SpeechToText {
 
 /**
  * 文字转语音（使用 GPT-SoVITS API）
+ * 版本: 2025-01-09-v2 (强制缓存刷新)
  */
 export async function textToSpeech(
   text: string,
