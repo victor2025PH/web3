@@ -31,8 +31,12 @@ jobs:
             git reset --hard origin/main
             git clean -fd
             
-            # Build aizkw
+            # Build aizkw (with cache clearing)
             cd aizkw20251219
+            # 清除所有构建缓存
+            rm -rf node_modules/.cache
+            rm -rf .vite
+            rm -rf dist
             npm install
             npm run build
             cd ..
