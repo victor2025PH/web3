@@ -39,3 +39,6 @@ logs/
 启动*.txt
 新建*.txt
 
+# Cloudflare Tunnel executable (too large for git)
+cloudflared.exe
+**/cloudflared.exe
