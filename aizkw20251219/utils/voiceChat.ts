@@ -24,13 +24,36 @@ export class SpeechToText {
     }
 
     this.recognition = new SpeechRecognition();
-    this.recognition.continuous = false; // 单次识别
-    this.recognition.interimResults = false; // 不返回中间结果
+    this.recognition.continuous = true; // 持续识别
+    this.recognition.interimResults = true; // 返回中间结果（实时显示）
     this.recognition.lang = 'zh-CN'; // 默认中文
+    this.recognition.maxAlternatives = 1;
+
+    // 累积所有识别结果
+    let fullTranscript = '';
 
     this.recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      this.onResultCallback?.(transcript);
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // 更新完整文本
+      if (finalTranscript) {
+        fullTranscript += finalTranscript;
+      }
+
+      // 返回当前识别结果（最终结果 + 临时结果）
+      const currentText = fullTranscript + interimTranscript;
+      console.log('[STT] 识别结果:', currentText);
+      this.onResultCallback?.(currentText);
     };
 
     this.recognition.onerror = (event: any) => {
@@ -68,9 +91,11 @@ export class SpeechToText {
     this.onEndCallback = onEnd;
 
     try {
+      console.log('[STT] 开始语音识别...');
       this.recognition.start();
       this.isListening = true;
     } catch (error) {
+      console.error('[STT] 启动失败:', error);
       if (error instanceof Error) {
         this.onErrorCallback?.(error);
       }
