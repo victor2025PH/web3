@@ -112,8 +112,19 @@ export async function textToSpeech(
   referenceAudio: Blob | null,
   referenceText: string
 ): Promise<Blob> {
-  if (!voiceConfig.apiBaseUrl) {
+  // 强制使用最新配置（避免缓存问题）
+  const apiBaseUrl = voiceConfig.apiBaseUrl;
+  
+  if (!apiBaseUrl) {
     throw new Error('请先配置 GPT-SoVITS API 地址（在 src/voiceConfig.ts 中）');
+  }
+
+  // 验证配置是否正确（不允许使用本地地址）
+  if (apiBaseUrl.includes('127.0.0.1') || apiBaseUrl.includes('localhost')) {
+    console.error('[TTS] ❌ 错误：检测到本地地址！前端部署在远程服务器时无法访问本地地址！');
+    console.error('[TTS] 当前配置:', apiBaseUrl);
+    console.error('[TTS] 请使用 Cloudflare Tunnel URL 更新 src/voiceConfig.ts');
+    throw new Error('配置错误：请使用 Cloudflare Tunnel URL，不能使用本地地址（127.0.0.1 或 localhost）');
   }
 
   if (!text.trim()) {
@@ -128,18 +139,17 @@ export async function textToSpeech(
   });
 
   // GPT-SoVITS API 端点路径
-  // 根据 GPT-SoVITS 版本，可能的路径：
-  // - /tts (GPT-SoVITS V2/V3)
-  // - /voice/synthesis (某些版本)
-  // - /api/tts (某些版本)
-  // 注意：如果 /tts 返回 404，请检查 GPT-SoVITS API 文档确认正确路径
-  let apiUrl = `${voiceConfig.apiBaseUrl}/tts`;
+  // 根据 Swagger UI 文档，正确的端点是 /tts
+  // 支持 GET 和 POST 两种方式
+  const apiEndpoint = '/tts';
+  let apiUrl = `${apiBaseUrl}${apiEndpoint}`;
   
-  // 验证配置是否正确加载
-  if (voiceConfig.apiBaseUrl.includes('127.0.0.1') || voiceConfig.apiBaseUrl.includes('localhost')) {
-    console.warn('[TTS] ⚠️ 警告：检测到本地地址，前端部署在远程服务器时无法访问！');
-    console.warn('[TTS] 请使用 Cloudflare Tunnel URL 或服务器 IP 地址');
-  }
+  console.log('[TTS] ========== 语音合成请求 ==========');
+  console.log('[TTS] API Base URL:', apiBaseUrl);
+  console.log('[TTS] API Endpoint:', apiEndpoint);
+  console.log('[TTS] Full API URL:', apiUrl);
+  console.log('[TTS] Reference Audio:', referenceAudio ? '已提供' : '未提供');
+  console.log('[TTS] Reference Text:', referenceText || '未设置');
   let requestOptions: RequestInit = {
     method: 'POST',
     headers: {
