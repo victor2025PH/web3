@@ -127,13 +127,21 @@ export async function textToSpeech(
     prompt_language: voiceConfig.promptLanguage,
   });
 
-  let apiUrl = `${voiceConfig.apiBaseUrl}/voice/synthesis`;
+  // GPT-SoVITS API 端点路径
+  // 根据 GPT-SoVITS 版本，可能的路径：
+  // - /tts (GPT-SoVITS V2)
+  // - /voice/synthesis (某些版本)
+  // - /api/tts (某些版本)
+  let apiUrl = `${voiceConfig.apiBaseUrl}/tts`;
   let requestOptions: RequestInit = {
     method: 'POST',
     headers: {
       'Accept': 'audio/wav, audio/*, */*',
     },
   };
+
+  console.log('[TTS] API Base URL:', voiceConfig.apiBaseUrl);
+  console.log('[TTS] Full API URL:', apiUrl);
 
   if (referenceAudio) {
     const formData = new FormData();
@@ -149,10 +157,29 @@ export async function textToSpeech(
     requestOptions.method = 'GET';
   }
 
+  console.log('[TTS] Request options:', {
+    method: requestOptions.method,
+    headers: requestOptions.headers,
+    hasBody: !!requestOptions.body,
+  });
+
   const response = await fetch(apiUrl, requestOptions);
 
   if (!response.ok) {
-    throw new Error(`TTS 请求失败: ${response.status}`);
+    const errorText = await response.text().catch(() => '无法读取错误信息');
+    console.error('[TTS] Request failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: apiUrl,
+      error: errorText,
+    });
+    
+    // 如果是 404，尝试其他可能的端点
+    if (response.status === 404) {
+      throw new Error(`TTS API 端点不存在 (404)。请检查 GPT-SoVITS API 端点路径。当前尝试: ${apiUrl}`);
+    }
+    
+    throw new Error(`TTS 请求失败: ${response.status} - ${errorText.substring(0, 100)}`);
   }
 
   const audioBlob = await response.blob();

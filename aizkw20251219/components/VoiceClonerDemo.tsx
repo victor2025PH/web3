@@ -378,7 +378,9 @@ export const VoiceClonerDemo: React.FC = () => {
         prompt_language: voiceConfig.promptLanguage,
       });
 
-      let apiUrl = `${voiceConfig.apiBaseUrl}/voice/synthesis`;
+      // GPT-SoVITS API 端点（与 utils/voiceChat.ts 保持一致）
+      let apiUrl = `${voiceConfig.apiBaseUrl}/tts`;
+      console.log('[VoiceClonerDemo] API URL:', apiUrl);
       let requestOptions: RequestInit = {
         method: 'POST',
         headers: {

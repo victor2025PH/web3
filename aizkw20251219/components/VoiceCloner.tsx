@@ -133,7 +133,8 @@ export const VoiceCloner: React.FC = () => {
         prompt_language: voiceConfig.promptLanguage,
       });
 
-      const apiUrl = `${voiceConfig.apiBaseUrl}/voice/synthesis?${params.toString()}`;
+      const apiUrl = `${voiceConfig.apiBaseUrl}/tts?${params.toString()}`;
+      console.log('[VoiceCloner] API URL:', apiUrl);
       
       console.log('发起语音合成请求:', apiUrl);
 
