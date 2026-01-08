@@ -5,7 +5,7 @@
  */
 
 // Cloudflare Tunnel URL - 公共安全访问
-const OLLAMA_URL = 'https://store-stylus-dollar-awarded.trycloudflare.com/api/chat';
+const OLLAMA_URL = 'https://manually-lease-pathology-ray.trycloudflare.com/api/chat';
 const OLLAMA_MODEL = 'huihui_ai/qwen2.5-abliterate'; // 硬编码模型名称
 
 // Z-CORE系统提示 - 强制注入
@@ -179,7 +179,7 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
  */
 export async function checkOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch('https://store-stylus-dollar-awarded.trycloudflare.com/api/tags', {
+    const response = await fetch('https://manually-lease-pathology-ray.trycloudflare.com/api/tags', {
       method: 'GET',
       mode: 'cors',
     });
