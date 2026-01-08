@@ -1,5 +1,6 @@
 /**
  * GPT-SoVITS V2 语音克隆配置
+ * 版本: 2025-01-09-v2 (强制缓存刷新)
  * 
  * 配置说明：
  * 1. apiBaseUrl: GPT-SoVITS API 服务器地址
