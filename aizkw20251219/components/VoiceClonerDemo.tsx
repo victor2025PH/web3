@@ -5,6 +5,8 @@ import { Button } from './ui/Button';
 import { voiceConfig } from '../src/voiceConfig';
 import { useVoiceCloner } from '../contexts/VoiceClonerContext';
 import { AudioRecorder } from '../utils/audioRecorder';
+import { SpeechToText, isSpeechRecognitionSupported } from '../utils/voiceChat';
+import { ReferenceTextConfirmDialog } from './ReferenceTextConfirmDialog';
 
 // 音频可视化组件
 const AudioVisualizer: React.FC<{ isPlaying: boolean; audioRef: React.RefObject<HTMLAudioElement> }> = ({ isPlaying, audioRef }) => {
@@ -92,6 +94,13 @@ const AudioVisualizer: React.FC<{ isPlaying: boolean; audioRef: React.RefObject<
 
 export const VoiceClonerDemo: React.FC = () => {
   const { referenceAudio, referenceText, referenceSource, setReferenceAudio, setReferenceText } = useVoiceCloner();
+  
+  // 录音识别相关状态
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [recognizedText, setRecognizedText] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingAudioBlob, setPendingAudioBlob] = useState<Blob | null>(null);
+  const recognitionRef = useRef<SpeechToText | null>(null);
   const [text, setText] = useState('');
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -199,23 +208,39 @@ export const VoiceClonerDemo: React.FC = () => {
     }
   };
 
-  // 开始录音
+  // 开始录音（同时进行语音识别）
   const handleStartRecording = async () => {
     try {
+      // 初始化语音识别
+      if (!recognitionRef.current && isSpeechRecognitionSupported()) {
+        try {
+          recognitionRef.current = new SpeechToText();
+        } catch (error) {
+          console.warn('语音识别初始化失败，将使用手动输入模式:', error);
+        }
+      }
+
       const recorder = new AudioRecorder({
-        onStop: (blob) => {
-          setReferenceAudio(blob, 'record');
+        onStop: async (blob) => {
           setIsRecording(false);
           setRecordingTime(0);
           if (recordingTimerRef.current) {
             clearInterval(recordingTimerRef.current);
             recordingTimerRef.current = null;
           }
+
+          // 保存音频
+          setPendingAudioBlob(blob);
+
+          // 显示确认对话框（识别结果已在录音过程中收集）
+          setShowConfirmDialog(true);
+          setIsRecognizing(false);
         },
         onError: (error) => {
           setError(error.message);
           setIsRecording(false);
           setRecordingTime(0);
+          setIsRecognizing(false);
           if (recordingTimerRef.current) {
             clearInterval(recordingTimerRef.current);
             recordingTimerRef.current = null;
@@ -228,6 +253,29 @@ export const VoiceClonerDemo: React.FC = () => {
       setIsRecording(true);
       setRecordingTime(0);
       setError(null);
+
+      // 开始语音识别（实时识别）
+      if (recognitionRef.current) {
+        let recognizedContent = '';
+        setIsRecognizing(true);
+        recognitionRef.current.start(
+          (text) => {
+            recognizedContent = text;
+            setRecognizedText(recognizedContent);
+          },
+          (error) => {
+            console.warn('识别过程中出错:', error);
+            setIsRecognizing(false);
+          },
+          () => {
+            // 识别结束
+            setIsRecognizing(false);
+            if (recognizedContent) {
+              setRecognizedText(recognizedContent);
+            }
+          }
+        );
+      }
 
       recordingTimerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
@@ -246,6 +294,58 @@ export const VoiceClonerDemo: React.FC = () => {
     if (audioRecorderRef.current) {
       audioRecorderRef.current.stop();
       audioRecorderRef.current = null;
+    }
+    // 停止语音识别
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsRecognizing(false);
+    }
+  };
+
+  // 确认参考文本
+  const handleConfirmReferenceText = (text: string) => {
+    if (pendingAudioBlob) {
+      setReferenceAudio(pendingAudioBlob, 'record');
+      setReferenceText(text);
+      setShowConfirmDialog(false);
+      setPendingAudioBlob(null);
+      setRecognizedText('');
+    }
+  };
+
+  // 取消确认对话框
+  const handleCancelConfirmDialog = () => {
+    setShowConfirmDialog(false);
+    setPendingAudioBlob(null);
+    setRecognizedText('');
+  };
+
+  // 重新识别
+  const handleRetryRecognition = () => {
+    if (recognitionRef.current && isSpeechRecognitionSupported()) {
+      setIsRecognizing(true);
+      let recognizedContent = '';
+      recognitionRef.current.start(
+        (text) => {
+          recognizedContent = text;
+          setRecognizedText(text);
+        },
+        (error) => {
+          console.error('重新识别失败:', error);
+          setIsRecognizing(false);
+          setError('识别失败，请手动输入文本');
+        },
+        () => {
+          setIsRecognizing(false);
+          if (!recognizedContent) {
+            setError('未识别到内容，请手动输入文本');
+          }
+        }
+      );
+    } else {
+      // 如果没有识别支持，提示用户手动输入
+      setRecognizedText('');
+      setError('浏览器不支持语音识别，请手动输入文本');
     }
   };
 
@@ -484,6 +584,9 @@ export const VoiceClonerDemo: React.FC = () => {
                   <>
                     <Square className="w-4 h-4" />
                     停止录音 ({formatTime(recordingTime)})
+                    {isRecognizing && (
+                      <span className="text-xs text-purple-400 ml-1">识别中...</span>
+                    )}
                   </>
                 ) : (
                   <>
@@ -780,6 +883,9 @@ export const VoiceClonerDemo: React.FC = () => {
                       <>
                         <Square className="w-3.5 h-3.5" />
                         停止 ({formatTime(recordingTime)})
+                        {isRecognizing && (
+                          <span className="text-[10px] text-purple-400 ml-1">识别中...</span>
+                        )}
                       </>
                     ) : (
                       <>
@@ -903,6 +1009,16 @@ export const VoiceClonerDemo: React.FC = () => {
 
       {/* 隐藏的音频元素 */}
       <audio ref={audioRef} className="hidden" />
+
+      {/* 参考文本确认对话框 */}
+      <ReferenceTextConfirmDialog
+        isOpen={showConfirmDialog}
+        audioBlob={pendingAudioBlob}
+        recognizedText={recognizedText}
+        onConfirm={handleConfirmReferenceText}
+        onCancel={handleCancelConfirmDialog}
+        onRetry={handleRetryRecognition}
+      />
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { useVoiceCloner } from '../contexts/VoiceClonerContext';
 import { AudioRecorder } from '../utils/audioRecorder';
 import { SpeechToText, textToSpeech, isSpeechRecognitionSupported } from '../utils/voiceChat';
 import { voiceConfig } from '../src/voiceConfig';
+import { ReferenceTextConfirmDialog } from './ReferenceTextConfirmDialog';
 
 // --- Helper: Inline Text Parser ---
 const parseInline = (text: string) => {
@@ -169,7 +170,7 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
 
 export const AIChatTerminal: React.FC = () => {
   const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode } = useAIChat();
-  const { setReferenceAudio, referenceAudio, referenceText } = useVoiceCloner();
+  const { setReferenceAudio, setReferenceText, referenceAudio, referenceText } = useVoiceCloner();
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true); // 默认显示，点击输入框后隐藏
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
@@ -179,6 +180,13 @@ export const AIChatTerminal: React.FC = () => {
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 录音识别相关状态
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [recognizedText, setRecognizedText] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingAudioBlob, setPendingAudioBlob] = useState<Blob | null>(null);
+  const recognitionRef = useRef<SpeechToText | null>(null);
   
   // 语音对话相关状态
   const [isVoiceChatMode, setIsVoiceChatMode] = useState(false);
@@ -570,23 +578,46 @@ export const AIChatTerminal: React.FC = () => {
     }
   };
 
-  // 开始录音
+  // 录音识别相关状态
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [recognizedText, setRecognizedText] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingAudioBlob, setPendingAudioBlob] = useState<Blob | null>(null);
+  const recognitionRef = useRef<SpeechToText | null>(null);
+
+  // 开始录音（同时进行语音识别）
   const handleStartRecording = async () => {
     try {
+      // 初始化语音识别
+      if (!recognitionRef.current && isSpeechRecognitionSupported()) {
+        try {
+          recognitionRef.current = new SpeechToText();
+        } catch (error) {
+          console.warn('语音识别初始化失败，将使用手动输入模式:', error);
+        }
+      }
+
       const recorder = new AudioRecorder({
-        onStop: (blob) => {
-          setReferenceAudio(blob, 'record');
+        onStop: async (blob) => {
           setIsRecording(false);
           setRecordingTime(0);
           if (recordingTimerRef.current) {
             clearInterval(recordingTimerRef.current);
             recordingTimerRef.current = null;
           }
+
+          // 保存音频
+          setPendingAudioBlob(blob);
+
+          // 显示确认对话框（识别结果已在录音过程中收集）
+          setShowConfirmDialog(true);
+          setIsRecognizing(false);
         },
         onError: (error) => {
           alert(error.message);
           setIsRecording(false);
           setRecordingTime(0);
+          setIsRecognizing(false);
           if (recordingTimerRef.current) {
             clearInterval(recordingTimerRef.current);
             recordingTimerRef.current = null;
@@ -598,6 +629,29 @@ export const AIChatTerminal: React.FC = () => {
       await recorder.start();
       setIsRecording(true);
       setRecordingTime(0);
+
+      // 开始语音识别（实时识别）
+      if (recognitionRef.current) {
+        let recognizedContent = '';
+        setIsRecognizing(true);
+        recognitionRef.current.start(
+          (text) => {
+            recognizedContent = text;
+            setRecognizedText(recognizedContent);
+          },
+          (error) => {
+            console.warn('识别过程中出错:', error);
+            setIsRecognizing(false);
+          },
+          () => {
+            // 识别结束
+            setIsRecognizing(false);
+            if (recognizedContent) {
+              setRecognizedText(recognizedContent);
+            }
+          }
+        );
+      }
 
       // 开始计时
       recordingTimerRef.current = setInterval(() => {
@@ -617,6 +671,57 @@ export const AIChatTerminal: React.FC = () => {
     if (audioRecorderRef.current) {
       audioRecorderRef.current.stop();
       audioRecorderRef.current = null;
+    }
+    // 停止语音识别
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+  };
+
+  // 确认参考文本
+  const handleConfirmReferenceText = (text: string) => {
+    if (pendingAudioBlob) {
+      setReferenceAudio(pendingAudioBlob, 'record');
+      setReferenceText(text);
+      setShowConfirmDialog(false);
+      setPendingAudioBlob(null);
+      setRecognizedText('');
+    }
+  };
+
+  // 取消确认对话框
+  const handleCancelConfirmDialog = () => {
+    setShowConfirmDialog(false);
+    setPendingAudioBlob(null);
+    setRecognizedText('');
+  };
+
+  // 重新识别
+  const handleRetryRecognition = () => {
+    if (pendingAudioBlob && recognitionRef.current) {
+      setIsRecognizing(true);
+      try {
+        recognitionRef.current.start(
+          (text) => {
+            setRecognizedText(text);
+            setIsRecognizing(false);
+          },
+          (error) => {
+            console.error('重新识别失败:', error);
+            setIsRecognizing(false);
+            alert('识别失败，请手动输入文本');
+          },
+          () => {
+            setIsRecognizing(false);
+          }
+        );
+      } catch (error) {
+        setIsRecognizing(false);
+        alert('识别失败，请手动输入文本');
+      }
+    } else {
+      // 如果没有识别支持，提示用户手动输入
+      setRecognizedText('');
     }
   };
 
@@ -1226,6 +1331,16 @@ export const AIChatTerminal: React.FC = () => {
             )}
           </motion.div>
         </div>
+
+        {/* 参考文本确认对话框 */}
+        <ReferenceTextConfirmDialog
+          isOpen={showConfirmDialog}
+          audioBlob={pendingAudioBlob}
+          recognizedText={recognizedText}
+          onConfirm={handleConfirmReferenceText}
+          onCancel={handleCancelConfirmDialog}
+          onRetry={handleRetryRecognition}
+        />
         </>
       )}
     </AnimatePresence>
