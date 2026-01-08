@@ -31,14 +31,25 @@ jobs:
             git reset --hard origin/main
             git clean -fd
             
-            # Build aizkw (with cache clearing)
+            # Build aizkw (with cache clearing but keep dist until build succeeds)
             cd aizkw20251219
-            # 清除所有构建缓存
+            # 清除构建缓存但保留dist
             rm -rf node_modules/.cache
             rm -rf .vite
-            rm -rf dist
+            # 备份当前dist
+            if [ -d "dist" ]; then mv dist dist_backup; fi
             npm install
-            npm run build
+            # 构建新版本
+            if npm run build; then
+              # 构建成功，删除备份
+              rm -rf dist_backup
+              echo "Build successful!"
+            else
+              # 构建失败，恢复备份
+              if [ -d "dist_backup" ]; then mv dist_backup dist; fi
+              echo "Build failed, restored previous version"
+              exit 1
+            fi
             cd ..
             
             # Build tgmini
