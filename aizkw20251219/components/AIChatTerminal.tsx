@@ -1205,6 +1205,9 @@ export const AIChatTerminal: React.FC = () => {
                     <>
                       <Square className="w-3 h-3" />
                       <span className="font-mono">{formatTime(recordingTime)}</span>
+                      {isRecognizing && (
+                        <span className="text-[10px] text-purple-400 ml-1 font-mono">识别中...</span>
+                      )}
                     </>
                   ) : (
                     <>
