@@ -578,13 +578,6 @@ export const AIChatTerminal: React.FC = () => {
     }
   };
 
-  // 录音识别相关状态
-  const [isRecognizing, setIsRecognizing] = useState(false);
-  const [recognizedText, setRecognizedText] = useState('');
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingAudioBlob, setPendingAudioBlob] = useState<Blob | null>(null);
-  const recognitionRef = useRef<SpeechToText | null>(null);
-
   // 开始录音（同时进行语音识别）
   const handleStartRecording = async () => {
     try {
