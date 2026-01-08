@@ -47,7 +47,7 @@ const MarkdownRenderer: React.FC<{ content: string }> = React.memo(({ content })
   const parts = content.split(/(```[\s\S]*?```)/g);
 
   return (
-    <div className="space-y-2 text-sm">
+    <div className="space-y-2 text-sm break-words overflow-wrap-anywhere">
       {parts.map((part, index) => {
         // Handle Code Blocks
         if (part.startsWith('```') && part.endsWith('```')) {
@@ -144,7 +144,7 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
       animate="visible"
       className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
     >
-        <div className={`max-w-[85%] rounded-lg p-3 relative group shadow-sm ${
+        <div className={`max-w-[85%] rounded-lg p-3 relative group shadow-sm break-words ${
           msg.role === 'user' 
             ? 'bg-cyan-950/40 border border-cyan-500/30 text-cyan-100 rounded-tr-none' 
             : 'bg-zinc-900/90 border border-zinc-700 text-zinc-300 rounded-tl-none'
@@ -155,7 +155,7 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
             </div>
           )}
           
-          <div className="leading-relaxed">
+          <div className="leading-relaxed break-words overflow-wrap-anywhere">
             <MarkdownRenderer content={msg.content} />
           </div>
 
@@ -209,6 +209,11 @@ export const AIChatTerminal: React.FC = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [customSize, setCustomSize] = useState<{ width: number; height: number } | null>(null);
   const resizeRef = useRef<HTMLDivElement>(null);
+  
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [customPosition, setCustomPosition] = useState<{ x: number; y: number } | null>(null);
 
   // Filter suggestions based on input
   const filteredSuggestions = useMemo(() => {
@@ -293,7 +298,17 @@ export const AIChatTerminal: React.FC = () => {
     else if (isWideScreen && spaceLeft >= MIN_W) placement = 'left';
     else placement = spaceBottom > spaceTop ? 'bottom' : 'top';
 
-    let top = 0, left = 0, width = customSize?.width || IDEAL_W, height = customSize?.height || IDEAL_H;
+    // Use custom position if available
+    let top = customPosition?.y ?? 0;
+    let left = customPosition?.x ?? 0;
+    let width = customSize?.width || IDEAL_W;
+    let height = customSize?.height || IDEAL_H;
+    
+    // If no custom position, use trigger-based positioning
+    if (!customPosition) {
+      top = 0;
+      left = 0;
+    }
     let beakS: React.CSSProperties = {};
     const triggerCenterX = triggerRect.left + triggerRect.width / 2;
     const triggerCenterY = triggerRect.top + triggerRect.height / 2;
@@ -343,28 +358,33 @@ export const AIChatTerminal: React.FC = () => {
 
     setChatStyle({
       position: 'fixed',
-      top,
-      left,
+      top: customPosition ? customPosition.y : top,
+      left: customPosition ? customPosition.x : left,
       width,
       height,
       maxHeight: 'none',
       zIndex: 60
     });
-    setBeakStyle(beakS);
+    setBeakStyle(customPosition ? { display: 'none' } : beakS);
 
-  }, [isOpen, triggerRect, customSize]);
+  }, [isOpen, triggerRect, customSize, customPosition]);
 
-  // Load saved window size from localStorage
+  // Load saved window size and position from localStorage
   useEffect(() => {
     if (!isOpen || isMobileLayout) return;
     try {
-      const saved = localStorage.getItem('ai_chat_window_size');
-      if (saved) {
-        const { width, height } = JSON.parse(saved);
+      const savedSize = localStorage.getItem('ai_chat_window_size');
+      if (savedSize) {
+        const { width, height } = JSON.parse(savedSize);
         setCustomSize({ width, height });
       }
+      const savedPos = localStorage.getItem('ai_chat_window_position');
+      if (savedPos) {
+        const { x, y } = JSON.parse(savedPos);
+        setCustomPosition({ x, y });
+      }
     } catch (error) {
-      console.warn('Failed to load window size:', error);
+      console.warn('Failed to load window settings:', error);
     }
   }, [isOpen, isMobileLayout]);
 
@@ -379,7 +399,7 @@ export const AIChatTerminal: React.FC = () => {
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
-      const newWidth = Math.max(300, Math.min(800, e.clientX - rect.left));
+      const newWidth = Math.max(300, Math.min(1200, e.clientX - rect.left));
       const newHeight = Math.max(300, Math.min(window.innerHeight - 40, e.clientY - rect.top));
 
       const newSize = { width: newWidth, height: newHeight };
@@ -394,7 +414,9 @@ export const AIChatTerminal: React.FC = () => {
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      // Save size will be handled by the dependency array in this useEffect
+      if (customSize) {
+        localStorage.setItem('ai_chat_window_size', JSON.stringify(customSize));
+      }
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -404,7 +426,68 @@ export const AIChatTerminal: React.FC = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, isFixed, isMobileLayout, chatStyle.left, chatStyle.top, customSize]);
+  }, [isResizing, isFixed, isMobileLayout, chatStyle.left, chatStyle.top]);
+
+  // Save size when it changes
+  useEffect(() => {
+    if (customSize && !isResizing && !isMobileLayout) {
+      localStorage.setItem('ai_chat_window_size', JSON.stringify(customSize));
+    }
+  }, [customSize, isResizing, isMobileLayout]);
+
+  // Handle drag mouse events
+  useEffect(() => {
+    if (!isDragging || isMobileLayout) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isFixed) return;
+      
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+      
+      // Constrain to viewport
+      const container = containerRef.current;
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      const maxX = window.innerWidth - rect.width;
+      const maxY = window.innerHeight - rect.height;
+      
+      const constrainedX = Math.max(0, Math.min(maxX, newX));
+      const constrainedY = Math.max(0, Math.min(maxY, newY));
+      
+      const newPos = { x: constrainedX, y: constrainedY };
+      setCustomPosition(newPos);
+      
+      setChatStyle(prev => ({
+        ...prev,
+        left: constrainedX,
+        top: constrainedY,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      if (customPosition) {
+        localStorage.setItem('ai_chat_window_position', JSON.stringify(customPosition));
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, isFixed, isMobileLayout, dragOffset]);
+
+  // Save position when it changes
+  useEffect(() => {
+    if (customPosition && !isDragging && !isMobileLayout) {
+      localStorage.setItem('ai_chat_window_position', JSON.stringify(customPosition));
+    }
+  }, [customPosition, isDragging, isMobileLayout]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -765,7 +848,22 @@ export const AIChatTerminal: React.FC = () => {
             <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none z-10 opacity-20 rounded-xl overflow-hidden"></div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-cyan-500/20 bg-zinc-900/50 rounded-t-xl shrink-0 cursor-move">
+            <div 
+              className="flex items-center justify-between px-4 py-3 border-b border-cyan-500/20 bg-zinc-900/50 rounded-t-xl shrink-0 cursor-move select-none"
+              onMouseDown={(e) => {
+                if (isMobileLayout) return;
+                e.preventDefault();
+                const container = containerRef.current;
+                if (!container) return;
+                const rect = container.getBoundingClientRect();
+                setDragOffset({
+                  x: e.clientX - rect.left,
+                  y: e.clientY - rect.top
+                });
+                setIsDragging(true);
+              }}
+              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            >
               <div className="flex items-center gap-3">
                 <div className="relative w-8 h-8 flex items-center justify-center">
                     <div className="absolute inset-0 border border-cyan-500/50 rounded-full animate-[spin_4s_linear_infinite]" />
@@ -868,7 +966,8 @@ export const AIChatTerminal: React.FC = () => {
             {/* Chat Body */}
             <div 
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-sm custom-scrollbar bg-black/40 scroll-smooth"
+              className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-sm custom-scrollbar bg-black/40 scroll-smooth"
+              style={{ minHeight: 0 }}
             >
               <AnimatePresence initial={false}>
               {messages.map((msg) => (
