@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { useLanguage } from './LanguageContext';
 import { detectUserLanguage } from '../utils/aiConfig';
 import { sendChatRequest, sendStreamChatRequest, ChatMessage } from '../utils/aiProxy';
-import { sendOllamaStreamRequest, sendOllamaRequest, OllamaChatMessage } from '../utils/ollamaProxy';
+import { sendOllamaStreamRequest, sendOllamaRequest, OllamaChatMessage, checkOllamaAvailable } from '../utils/ollamaProxy';
 import { loadMessages, saveMessages, clearStoredMessages } from '../utils/messageStorage';
 import { getSessionId, updateSessionActivity } from '../utils/sessionManager';
 
@@ -83,6 +83,20 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       console.warn('保存AI模式失败:', e);
     }
   }, [aiMode]);
+
+  // 当切换到 ollama 模式时，检查连接
+  useEffect(() => {
+    if (aiMode === 'ollama' && isOpen) {
+      checkOllamaAvailable().then((isAvailable) => {
+        if (!isAvailable) {
+          console.warn('Ollama 服务不可用');
+          // 不自动显示错误，让用户尝试发送消息时再显示
+        } else {
+          console.log('Ollama 服务连接正常');
+        }
+      });
+    }
+  }, [aiMode, isOpen]);
   
   // 当消息更新时，自动保存到 localStorage
   useEffect(() => {
@@ -374,29 +388,33 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         // Ollama连接失败的友好提示
         const ollamaErrorMessage = `❌ **本地 Ollama 连接失败**
 
-无法连接到本地的 Ollama 服务 (http://localhost:11434)
+无法通过 Cloudflare Tunnel 连接到 Ollama 服务
+
+**当前配置：**
+- Cloudflare Tunnel URL: \`https://gary-barry-discussed-fare.trycloudflare.com\`
+- 本地 Ollama 地址: \`http://localhost:11434\`
 
 **请检查以下事项：**
 
-1. ✅ **确保已安装 Ollama**
-   - 访问 https://ollama.ai 下载并安装
-   
-2. ✅ **确保 Ollama 服务正在运行**
+1. ✅ **确保 Ollama 服务正在本地运行**
    - Windows: 检查 Ollama 是否在后台运行
    - 或在终端运行: \`ollama serve\`
+   - 测试本地连接: 打开浏览器访问 \`http://localhost:11434/api/tags\`
+   
+2. ✅ **确保 Cloudflare Tunnel 正在运行**
+   - 在终端运行: \`cloudflared tunnel --url http://localhost:11434\`
+   - 确保 Tunnel URL 与配置一致: \`https://gary-barry-discussed-fare.trycloudflare.com\`
    
 3. ✅ **确保模型已下载**
    - 运行: \`ollama pull huihui_ai/qwen2.5-abliterate\`
    
-4. ✅ **检查端口 11434 是否被占用**
-   - 默认端口: 11434
-   
-5. ✅ **如果使用自定义端口**
-   - 需要配置环境变量 \`VITE_OLLAMA_BASE_URL\`
+4. ✅ **检查网络连接**
+   - 确保 Cloudflare Tunnel 可以访问本地 Ollama
+   - 检查防火墙是否阻止了连接
 
-**快速测试：**
-打开浏览器访问: http://localhost:11434/api/tags
-如果能看到JSON响应，说明Ollama服务正常运行。
+**快速诊断：**
+1. 测试本地 Ollama: \`http://localhost:11434/api/tags\`
+2. 测试 Tunnel: \`https://gary-barry-discussed-fare.trycloudflare.com/api/tags\`
 
 如果问题仍然存在，请切换到"远程AI"模式使用云端服务。`;
 
