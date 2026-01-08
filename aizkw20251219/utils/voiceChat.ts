@@ -129,10 +129,17 @@ export async function textToSpeech(
 
   // GPT-SoVITS API 端点路径
   // 根据 GPT-SoVITS 版本，可能的路径：
-  // - /tts (GPT-SoVITS V2)
+  // - /tts (GPT-SoVITS V2/V3)
   // - /voice/synthesis (某些版本)
   // - /api/tts (某些版本)
+  // 注意：如果 /tts 返回 404，请检查 GPT-SoVITS API 文档确认正确路径
   let apiUrl = `${voiceConfig.apiBaseUrl}/tts`;
+  
+  // 验证配置是否正确加载
+  if (voiceConfig.apiBaseUrl.includes('127.0.0.1') || voiceConfig.apiBaseUrl.includes('localhost')) {
+    console.warn('[TTS] ⚠️ 警告：检测到本地地址，前端部署在远程服务器时无法访问！');
+    console.warn('[TTS] 请使用 Cloudflare Tunnel URL 或服务器 IP 地址');
+  }
   let requestOptions: RequestInit = {
     method: 'POST',
     headers: {
