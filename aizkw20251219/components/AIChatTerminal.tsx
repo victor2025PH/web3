@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Cpu, Activity, ChevronRight, Sparkles, Command, Terminal, Server, Zap, Maximize2, Minimize2, Upload, Mic, Square } from 'lucide-react';
+import { X, Send, Bot, Cpu, Activity, ChevronRight, Sparkles, Command, Terminal, Server, Zap, Maximize2, Minimize2, Upload, Mic, Square, Volume2, VolumeX } from 'lucide-react';
 import { useAIChat, Message } from '../contexts/AIChatContext';
 import { useVoiceCloner } from '../contexts/VoiceClonerContext';
 import { AudioRecorder } from '../utils/audioRecorder';
+import { SpeechToText, textToSpeech, isSpeechRecognitionSupported } from '../utils/voiceChat';
+import { voiceConfig } from '../src/voiceConfig';
 
 // --- Helper: Inline Text Parser ---
 const parseInline = (text: string) => {
@@ -167,7 +169,7 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
 
 export const AIChatTerminal: React.FC = () => {
   const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode } = useAIChat();
-  const { setReferenceAudio } = useVoiceCloner();
+  const { setReferenceAudio, referenceAudio, referenceText } = useVoiceCloner();
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true); // 默认显示，点击输入框后隐藏
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
@@ -177,6 +179,14 @@ export const AIChatTerminal: React.FC = () => {
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 语音对话相关状态
+  const [isVoiceChatMode, setIsVoiceChatMode] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const speechToTextRef = useRef<SpeechToText | null>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   
   // 当有新的suggestions时显示
   useEffect(() => {
@@ -527,6 +537,148 @@ export const AIChatTerminal: React.FC = () => {
     }
   };
 
+  // 初始化语音识别
+  useEffect(() => {
+    if (isVoiceChatMode && isSpeechRecognitionSupported()) {
+      try {
+        speechToTextRef.current = new SpeechToText();
+      } catch (error) {
+        console.error('语音识别初始化失败:', error);
+        setIsVoiceChatMode(false);
+      }
+    }
+    return () => {
+      if (speechToTextRef.current) {
+        speechToTextRef.current.stop();
+      }
+    };
+  }, [isVoiceChatMode]);
+
+  // 开始语音输入
+  const handleStartVoiceInput = () => {
+    if (!speechToTextRef.current) {
+      if (!isSpeechRecognitionSupported()) {
+        alert('您的浏览器不支持语音识别功能，请使用 Chrome、Edge 或 Safari 浏览器');
+        return;
+      }
+      try {
+        speechToTextRef.current = new SpeechToText();
+      } catch (error) {
+        console.error('语音识别初始化失败:', error);
+        alert('语音识别初始化失败');
+        return;
+      }
+    }
+
+    setIsListening(true);
+    speechToTextRef.current.start(
+      (text) => {
+        // 识别成功，发送消息
+        setIsListening(false);
+        if (text.trim()) {
+          sendMessage(text.trim());
+          // 如果开启了语音回复模式，等待AI回复后自动转换为语音
+        }
+      },
+      (error) => {
+        // 识别失败
+        setIsListening(false);
+        console.error('语音识别失败:', error);
+        alert(error.message);
+      },
+      () => {
+        // 识别结束
+        setIsListening(false);
+      }
+    );
+  };
+
+  // 停止语音输入
+  const handleStopVoiceInput = () => {
+    if (speechToTextRef.current) {
+      speechToTextRef.current.stop();
+      setIsListening(false);
+    }
+  };
+
+  // 将AI回复转换为语音并播放
+  const handleSpeakAIResponse = async (text: string) => {
+    if (!isVoiceChatMode || !text.trim()) return;
+
+    // 检查是否有参考音频
+    if (!referenceAudio) {
+      console.warn('未设置参考音频，无法进行语音合成');
+      return;
+    }
+
+    setIsSynthesizing(true);
+    setIsSpeaking(true);
+
+    try {
+      // 调用TTS API
+      const audioBlob = await textToSpeech(text, referenceAudio, referenceText);
+      
+      // 创建音频URL并播放
+      const audioUrl = URL.createObjectURL(audioBlob);
+      if (!audioPlayerRef.current) {
+        audioPlayerRef.current = new Audio();
+      }
+      
+      audioPlayerRef.current.src = audioUrl;
+      audioPlayerRef.current.onended = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+      audioPlayerRef.current.onerror = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(audioUrl);
+        console.error('音频播放失败');
+      };
+
+      await audioPlayerRef.current.play();
+    } catch (error) {
+      console.error('语音合成失败:', error);
+      setIsSpeaking(false);
+      if (error instanceof Error) {
+        alert(`语音合成失败: ${error.message}`);
+      }
+    } finally {
+      setIsSynthesizing(false);
+    }
+  };
+
+  // 跟踪已处理的AI消息ID，避免重复转换
+  const processedMessageIdsRef = useRef<Set<string>>(new Set());
+
+  // 监听AI回复，自动转换为语音
+  useEffect(() => {
+    if (!isVoiceChatMode || !referenceAudio || messages.length === 0) return;
+    
+    const lastMessage = messages[messages.length - 1];
+    
+    // 如果是AI的回复、不是正在输入中、且未处理过
+    if (
+      lastMessage.role === 'ai' && 
+      !isTyping && 
+      !isSynthesizing && 
+      !isSpeaking &&
+      !processedMessageIdsRef.current.has(lastMessage.id)
+    ) {
+      processedMessageIdsRef.current.add(lastMessage.id);
+      handleSpeakAIResponse(lastMessage.content);
+    }
+  }, [messages, isTyping, isVoiceChatMode, referenceAudio]);
+
+  // 清理音频资源
+  useEffect(() => {
+    return () => {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
+      }
+    };
+  }, []);
+
   // 清理录音资源
   useEffect(() => {
     return () => {
@@ -636,6 +788,49 @@ export const AIChatTerminal: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {/* 语音对话模式切换 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!referenceAudio) {
+                      alert('请先上传或录制参考音频以启用语音对话功能\n\n步骤：\n1. 点击"上传音频"或"录音"按钮\n2. 上传/录制参考音频（5-30秒）\n3. 然后即可启用语音对话模式');
+                      return;
+                    }
+                    if (!voiceConfig.apiBaseUrl) {
+                      alert('请先配置 GPT-SoVITS API 地址\n\n在 src/voiceConfig.ts 中设置 apiBaseUrl');
+                      return;
+                    }
+                    setIsVoiceChatMode(!isVoiceChatMode);
+                  }}
+                  className={`relative flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all ${
+                    isVoiceChatMode
+                      ? 'bg-purple-500/20 border-purple-500/50 text-purple-400 hover:bg-purple-500/30'
+                      : referenceAudio && voiceConfig.apiBaseUrl
+                      ? 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-300'
+                      : 'bg-zinc-900/50 border-zinc-800/50 text-zinc-600 cursor-not-allowed opacity-50'
+                  }`}
+                  title={
+                    !referenceAudio 
+                      ? '请先上传或录制参考音频' 
+                      : !voiceConfig.apiBaseUrl
+                      ? '请先配置 GPT-SoVITS API 地址'
+                      : isVoiceChatMode 
+                      ? '关闭语音对话模式' 
+                      : '开启语音对话模式'
+                  }
+                >
+                  {isVoiceChatMode ? (
+                    <>
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-mono font-bold uppercase">语音对话</span>
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-mono font-bold uppercase">文字对话</span>
+                    </>
+                  )}
+                </button>
                 {/* AI Mode Toggle */}
                 <button
                   onClick={(e) => {
@@ -809,7 +1004,14 @@ export const AIChatTerminal: React.FC = () => {
                <form onSubmit={handleSend} className="relative flex items-center gap-2">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <Activity className="w-4 h-4 text-cyan-500/50" />
-                    {input === '' && <span className="w-1.5 h-4 bg-cyan-500/50 animate-pulse ml-0.5" />}
+                    {input === '' && !isListening && <span className="w-1.5 h-4 bg-cyan-500/50 animate-pulse ml-0.5" />}
+                    {isListening && (
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                        className="w-2 h-2 bg-red-500 rounded-full"
+                      />
+                    )}
                   </div>
                   <input
                     ref={inputRef}
@@ -818,19 +1020,81 @@ export const AIChatTerminal: React.FC = () => {
                     onFocus={() => setShowSuggestions(false)}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="请输入指令..."
-                    className="w-full bg-black/50 border border-white/10 rounded-md py-2.5 pl-10 pr-10 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 font-mono text-sm transition-all"
+                    placeholder={isVoiceChatMode ? "语音对话模式：点击麦克风说话..." : "请输入指令..."}
+                    className="w-full bg-black/50 border border-white/10 rounded-md py-2.5 pl-10 pr-20 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 font-mono text-sm transition-all"
                     autoFocus
                     autoComplete="off"
+                    disabled={isListening}
                   />
+                  {/* 语音输入按钮 */}
+                  {isVoiceChatMode && (
+                    <button
+                      type="button"
+                      onClick={isListening ? handleStopVoiceInput : handleStartVoiceInput}
+                      disabled={isTyping || isSynthesizing || isSpeaking}
+                      className={`absolute right-12 top-1/2 -translate-y-1/2 p-1.5 rounded transition-colors ${
+                        isListening
+                          ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 animate-pulse'
+                          : 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
+                      } disabled:opacity-30 disabled:cursor-not-allowed`}
+                      title={isListening ? '停止语音输入' : '开始语音输入'}
+                    >
+                      <Mic className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {/* 发送按钮 */}
                   <button 
                     type="submit"
-                    disabled={!input.trim() || isTyping}
+                    disabled={!input.trim() || isTyping || isListening}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-cyan-500/10 rounded hover:bg-cyan-500/20 text-cyan-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <Send className="w-3.5 h-3.5" />
                   </button>
                </form>
+               
+               {/* 语音状态提示 */}
+               <AnimatePresence>
+                 {(isListening || isSynthesizing || isSpeaking) && (
+                   <motion.div
+                     initial={{ opacity: 0, y: 5 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: 5 }}
+                     className="mt-2 px-3 py-1.5 bg-purple-500/10 border border-purple-500/30 rounded-md text-xs text-purple-400 font-mono flex items-center gap-2"
+                   >
+                     {isListening && (
+                       <>
+                         <motion.div
+                           animate={{ scale: [1, 1.2, 1] }}
+                           transition={{ duration: 0.8, repeat: Infinity }}
+                           className="w-2 h-2 bg-red-500 rounded-full"
+                         />
+                         正在聆听...
+                       </>
+                     )}
+                     {isSynthesizing && (
+                       <>
+                         <motion.div
+                           animate={{ rotate: 360 }}
+                           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                         >
+                           <Volume2 className="w-3 h-3" />
+                         </motion.div>
+                         正在合成语音...
+                       </>
+                     )}
+                     {isSpeaking && (
+                       <>
+                         <motion.div
+                           animate={{ scale: [1, 1.1, 1] }}
+                           transition={{ duration: 0.6, repeat: Infinity }}
+                           className="w-2 h-2 bg-green-500 rounded-full"
+                         />
+                         AI正在说话...
+                       </>
+                     )}
+                   </motion.div>
+                 )}
+               </AnimatePresence>
             </div>
 
             {/* Resize Handle - Only show on desktop fixed mode */}
