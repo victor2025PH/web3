@@ -5,7 +5,7 @@
  */
 
 // Cloudflare Tunnel URL - 公共安全访问
-const OLLAMA_URL = 'https://calculators-sons-boxes-dice.trycloudflare.com/api/chat';
+const OLLAMA_URL = 'https://reasonably-ronald-shops-guild.trycloudflare.com/api/chat';
 const OLLAMA_MODEL = 'huihui_ai/qwen2.5-abliterate'; // 硬编码模型名称
 
 // Z-CORE系统提示 - 优化版：资深黑科技顾问
@@ -206,7 +206,7 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
  */
 export async function checkOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch('https://calculators-sons-boxes-dice.trycloudflare.com/api/tags', {
+    const response = await fetch('https://reasonably-ronald-shops-guild.trycloudflare.com/api/tags', {
       method: 'GET',
       mode: 'cors',
     });

@@ -219,7 +219,7 @@ server.on('error', (err) => {
   console.error('服務器錯誤:', err);
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(60));
   console.log('GPT-SoVITS CORS 代理服務器 v3');
   console.log('='.repeat(60));
