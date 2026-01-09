@@ -215,6 +215,7 @@ export const AIChatTerminal: React.FC = () => {
   
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
+  const isResizingRef = useRef(false); // 用 ref 追蹤調整狀態，避免觸發重新渲染
   const [customSize, setCustomSize] = useState<{ width: number; height: number } | null>(null);
   const resizeRef = useRef<HTMLDivElement>(null);
   
@@ -247,8 +248,8 @@ export const AIChatTerminal: React.FC = () => {
 
   // --- Advanced Positioning Logic ---
   useLayoutEffect(() => {
-    // 調整大小時不要重新計算佈局
-    if (!isOpen || isResizing) return;
+    // 調整大小時不要重新計算佈局（使用 ref 避免依賴問題）
+    if (!isOpen || isResizingRef.current) return;
 
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
@@ -391,7 +392,7 @@ export const AIChatTerminal: React.FC = () => {
     });
     setBeakStyle(customPosition ? { display: 'none' } : beakS);
 
-  }, [isOpen, triggerRect, customSize, customPosition, isResizing]);
+  }, [isOpen, triggerRect, customSize, customPosition]);
 
   // Load saved window size and position from localStorage
   useEffect(() => {
@@ -448,17 +449,29 @@ export const AIChatTerminal: React.FC = () => {
 
     const handleMouseUp = () => {
       console.log('[Resize] 調整結束');
-      setIsResizing(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       
       const container = containerRef.current;
       if (container) {
         const rect = container.getBoundingClientRect();
-        const finalSize = { width: rect.width, height: rect.height };
-        setCustomSize(finalSize);
+        const finalSize = { width: Math.round(rect.width), height: Math.round(rect.height) };
+        
+        // 先保存到 localStorage
         localStorage.setItem('ai_chat_window_size', JSON.stringify(finalSize));
         console.log('[Resize] 保存尺寸:', finalSize);
+        
+        // 更新 state
+        setCustomSize(finalSize);
+        
+        // 延遲清除 resizing 狀態，確保 customSize 已更新
+        setTimeout(() => {
+          isResizingRef.current = false;
+          setIsResizing(false);
+        }, 50);
+      } else {
+        isResizingRef.current = false;
+        setIsResizing(false);
       }
     };
 
@@ -1350,6 +1363,7 @@ export const AIChatTerminal: React.FC = () => {
                   e.preventDefault();
                   e.stopPropagation();
                   console.log('[Resize] 開始調整大小');
+                  isResizingRef.current = true;
                   setIsResizing(true);
                   document.body.style.cursor = 'nwse-resize';
                   document.body.style.userSelect = 'none';
