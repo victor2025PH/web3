@@ -247,7 +247,8 @@ export const AIChatTerminal: React.FC = () => {
 
   // --- Advanced Positioning Logic ---
   useLayoutEffect(() => {
-    if (!isOpen) return;
+    // 調整大小時不要重新計算佈局
+    if (!isOpen || isResizing) return;
 
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
@@ -390,7 +391,7 @@ export const AIChatTerminal: React.FC = () => {
     });
     setBeakStyle(customPosition ? { display: 'none' } : beakS);
 
-  }, [isOpen, triggerRect, customSize, customPosition]);
+  }, [isOpen, triggerRect, customSize, customPosition, isResizing]);
 
   // Load saved window size and position from localStorage
   useEffect(() => {
