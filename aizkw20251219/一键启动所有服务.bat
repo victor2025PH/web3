@@ -32,16 +32,24 @@ echo       Tailscale IP: %TAILSCALE_IP%
 echo.
 
 :: ============================================
-:: 2. 設置環境變量並啟動 Ollama
+:: 2. 設置環境變量並啟動 Ollama（允許遠程連接）
 :: ============================================
-echo [2/5] 啟動 Ollama AI 服務...
-tasklist /FI "IMAGENAME eq ollama.exe" 2>NUL | find /I /N "ollama.exe">NUL
-if "%ERRORLEVEL%"=="1" (
-    echo       正在啟動 Ollama...
-    start "Ollama AI 服務" cmd /k "title Ollama AI 服務 && set OLLAMA_HOST=0.0.0.0:11434 && set OLLAMA_ORIGINS=* && ollama serve"
-    timeout /t 3 /nobreak >nul
+echo [2/5] 啟動 Ollama AI 服務（允許遠程連接）...
+
+:: 檢查 Ollama 是否正確監聽 0.0.0.0
+netstat -an | find "0.0.0.0:11434" | find "LISTENING" >nul 2>&1
+if "%ERRORLEVEL%"=="0" (
+    echo       Ollama 已正確監聽遠程連接
 ) else (
-    echo       Ollama 已在運行
+    :: 停止現有的 Ollama
+    echo       停止現有 Ollama 進程...
+    taskkill /F /IM ollama.exe >nul 2>&1
+    timeout /t 2 /nobreak >nul
+    
+    :: 用正確的配置啟動
+    echo       正在啟動 Ollama（允許遠程連接）...
+    start "Ollama AI 服務" cmd /k "title Ollama AI 服務 && set OLLAMA_HOST=0.0.0.0:11434 && set OLLAMA_ORIGINS=* && ollama serve"
+    timeout /t 5 /nobreak >nul
 )
 echo.
 
