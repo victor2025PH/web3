@@ -416,18 +416,20 @@ export const AIChatTerminal: React.FC = () => {
     if (!isResizing || isMobileLayout) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isFixed || typeof chatStyle.left !== 'number' || typeof chatStyle.top !== 'number') return;
+      // 簡化條件：只要在調整大小模式下就處理
+      if (!isFixed) return;
       
       const container = containerRef.current;
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
-      const newWidth = Math.max(300, Math.min(1200, e.clientX - rect.left));
-      const newHeight = Math.max(300, Math.min(window.innerHeight - 40, e.clientY - rect.top));
+      const newWidth = Math.max(320, Math.min(1200, e.clientX - rect.left));
+      const newHeight = Math.max(350, Math.min(window.innerHeight - 40, e.clientY - rect.top));
 
       const newSize = { width: newWidth, height: newHeight };
       setCustomSize(newSize);
       
+      // 直接更新樣式
       setChatStyle(prev => ({
         ...prev,
         width: newWidth,
@@ -437,8 +439,17 @@ export const AIChatTerminal: React.FC = () => {
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      if (customSize) {
-        localStorage.setItem('ai_chat_window_size', JSON.stringify(customSize));
+      // 重置游標樣式
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      
+      // 保存最終大小
+      const container = containerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const finalSize = { width: rect.width, height: rect.height };
+        setCustomSize(finalSize);
+        localStorage.setItem('ai_chat_window_size', JSON.stringify(finalSize));
       }
     };
 
@@ -449,7 +460,7 @@ export const AIChatTerminal: React.FC = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, isFixed, isMobileLayout, chatStyle.left, chatStyle.top]);
+  }, [isResizing, isFixed, isMobileLayout]);
 
   // Save size when it changes
   useEffect(() => {
@@ -1330,18 +1341,21 @@ export const AIChatTerminal: React.FC = () => {
                   e.preventDefault();
                   e.stopPropagation();
                   setIsResizing(true);
+                  // 添加全局游標樣式
+                  document.body.style.cursor = 'nwse-resize';
+                  document.body.style.userSelect = 'none';
                 }}
-                className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize z-50 group/resize"
+                className={`absolute bottom-0 right-0 w-10 h-10 z-50 group/resize ${isResizing ? 'bg-cyan-500/20' : ''}`}
                 style={{ cursor: 'nwse-resize' }}
               >
-                {/* 調整大小圖標 - 三條斜線 */}
-                <div className="absolute bottom-1 right-1 w-4 h-4">
-                  <div className="absolute bottom-0 right-0 w-3 h-[2px] bg-cyan-500/50 group-hover/resize:bg-cyan-400 transition-colors transform rotate-[-45deg] origin-right" style={{ bottom: '2px', right: '2px' }} />
-                  <div className="absolute bottom-0 right-0 w-2 h-[2px] bg-cyan-500/50 group-hover/resize:bg-cyan-400 transition-colors transform rotate-[-45deg] origin-right" style={{ bottom: '5px', right: '2px' }} />
-                  <div className="absolute bottom-0 right-0 w-1 h-[2px] bg-cyan-500/50 group-hover/resize:bg-cyan-400 transition-colors transform rotate-[-45deg] origin-right" style={{ bottom: '8px', right: '2px' }} />
-                </div>
-                {/* 備用：簡單的角落指示 */}
-                <div className="absolute bottom-1 right-1 w-3 h-3 border-r-2 border-b-2 border-cyan-500/40 group-hover/resize:border-cyan-400 rounded-br transition-colors" />
+                {/* 調整大小圖標 - 簡潔的角落指示 */}
+                <svg 
+                  className="absolute bottom-1 right-1 w-5 h-5 text-cyan-500/60 group-hover/resize:text-cyan-400 transition-colors"
+                  viewBox="0 0 24 24" 
+                  fill="currentColor"
+                >
+                  <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22ZM22 10H20V8H22V10ZM18 14H16V12H18V14ZM14 18H12V16H14V18ZM10 22H8V20H10V22Z" />
+                </svg>
               </div>
             )}
           </motion.div>
