@@ -14,6 +14,8 @@ export class SpeechToText {
   private onResultCallback?: (text: string) => void;
   private onErrorCallback?: (error: Error) => void;
   private onEndCallback?: () => void;
+  private fullTranscript: string = ''; // 累積完整結果
+  private hasSentFinalResult: boolean = false; // 防止重複發送
 
   constructor() {
     // 检查浏览器是否支持 Web Speech API
@@ -24,36 +26,32 @@ export class SpeechToText {
     }
 
     this.recognition = new SpeechRecognition();
-    this.recognition.continuous = true; // 持续识别
-    this.recognition.interimResults = true; // 返回中间结果（实时显示）
+    this.recognition.continuous = false; // 改為單次識別，避免重複發送
+    this.recognition.interimResults = false; // 只返回最終結果
     this.recognition.lang = 'zh-CN'; // 默认中文
     this.recognition.maxAlternatives = 1;
 
-    // 累积所有识别结果
-    let fullTranscript = '';
-
     this.recognition.onresult = (event: any) => {
-      let interimTranscript = '';
+      // 防止重複處理
+      if (this.hasSentFinalResult) {
+        console.log('[STT] 已發送結果，忽略重複事件');
+        return;
+      }
+
       let finalTranscript = '';
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        } else {
-          interimTranscript += transcript;
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
         }
       }
 
-      // 更新完整文本
-      if (finalTranscript) {
-        fullTranscript += finalTranscript;
+      if (finalTranscript.trim()) {
+        this.hasSentFinalResult = true; // 標記已發送
+        console.log('[STT] 最終識別結果:', finalTranscript);
+        this.onResultCallback?.(finalTranscript.trim());
       }
-
-      // 返回当前识别结果（最终结果 + 临时结果）
-      const currentText = fullTranscript + interimTranscript;
-      console.log('[STT] 识别结果:', currentText);
-      this.onResultCallback?.(currentText);
     };
 
     this.recognition.onerror = (event: any) => {
@@ -70,6 +68,9 @@ export class SpeechToText {
 
     this.recognition.onend = () => {
       this.isListening = false;
+      // 重置狀態以便下次使用
+      this.hasSentFinalResult = false;
+      this.fullTranscript = '';
       this.onEndCallback?.();
     };
   }
