@@ -21,7 +21,7 @@ import { WelcomeGuide, useWelcomeGuide } from './components/WelcomeGuide';
 import { FloatingCTA } from './components/FloatingCTA';
 import { VIPMembershipModal, useVIPModal } from './components/VIPMembershipModal';
 import { LiveStatsBar } from './components/LiveStatsBar';
-import { QuickActions, FloatingQuickActions } from './components/QuickActions';
+import { QuickActions } from './components/QuickActions';
 import { CaseStudies } from './components/CaseStudies';
 import { PricingCalculator } from './components/PricingCalculator';
 import { ContactSalesForm, useContactForm } from './components/ContactSalesForm';
@@ -592,9 +592,6 @@ const LandingContent: React.FC = () => {
 
       {/* 浮動 CTA 按鈕 */}
       <FloatingCTA />
-
-      {/* 浮動快速行動按鈕 */}
-      <FloatingQuickActions />
 
       {/* VIP 會員彈窗 */}
       <VIPMembershipModal isOpen={isVIPModalOpen} onClose={closeVIPModal} />

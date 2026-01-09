@@ -269,7 +269,7 @@ export const Hero: React.FC = () => {
         </div>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-30">
           <Button 
             variant="primary" 
             icon 
