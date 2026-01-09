@@ -187,25 +187,41 @@ export async function textToSpeech(
   console.log('[TTS] Full API URL:', apiUrl);
 
   if (referenceAudio) {
-    // 将音频 Blob 转换为 Base64
-    const arrayBuffer = await referenceAudio.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    let binaryString = '';
-    for (let i = 0; i < uint8Array.length; i++) {
-      binaryString += String.fromCharCode(uint8Array[i]);
-    }
-    const base64Audio = btoa(binaryString);
-    
     console.log('[TTS] Audio size:', referenceAudio.size, 'bytes');
-    console.log('[TTS] Base64 length:', base64Audio.length);
     
-    // 使用 JSON 格式发送请求
+    // 第一步：上傳音頻到代理服務器
+    console.log('[TTS] 步驟 1: 上傳參考音頻...');
+    const uploadFormData = new FormData();
+    uploadFormData.append('audio', referenceAudio, 'reference.wav');
+    
+    const uploadResponse = await fetch(`${apiBaseUrl}/upload_audio`, {
+      method: 'POST',
+      body: uploadFormData,
+    });
+    
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text().catch(() => '');
+      throw new Error(`音頻上傳失敗: ${uploadResponse.status} - ${errorText}`);
+    }
+    
+    const uploadResult = await uploadResponse.json();
+    console.log('[TTS] 音頻上傳成功:', uploadResult);
+    
+    if (!uploadResult.filepath) {
+      throw new Error('上傳響應缺少 filepath');
+    }
+    
+    // 第二步：使用文件路徑調用 TTS
+    console.log('[TTS] 步驟 2: 調用 TTS API...');
     const requestBody = {
       text: text.trim(),
-      text_language: voiceConfig.textLanguage,
+      text_lang: voiceConfig.textLanguage,
+      ref_audio_path: uploadResult.filepath,
+      prompt_lang: voiceConfig.promptLanguage,
       prompt_text: referenceText,
-      prompt_language: voiceConfig.promptLanguage,
-      ref_audio_base64: base64Audio,
+      text_split_method: 'cut5',
+      media_type: 'wav',
+      streaming_mode: false,
     };
     
     requestOptions.headers = {
@@ -214,7 +230,7 @@ export async function textToSpeech(
     };
     requestOptions.body = JSON.stringify(requestBody);
     
-    console.log('[TTS] Request body keys:', Object.keys(requestBody));
+    console.log('[TTS] Request body:', requestBody);
   } else {
     params.append('refer_wav_path', voiceConfig.referWavPath);
     apiUrl = `${apiUrl}?${params.toString()}`;
