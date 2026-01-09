@@ -187,13 +187,34 @@ export async function textToSpeech(
   console.log('[TTS] Full API URL:', apiUrl);
 
   if (referenceAudio) {
-    const formData = new FormData();
-    formData.append('text', text.trim());
-    formData.append('text_language', voiceConfig.textLanguage);
-    formData.append('prompt_text', referenceText);
-    formData.append('prompt_language', voiceConfig.promptLanguage);
-    formData.append('refer_wav', referenceAudio, 'reference.wav');
-    requestOptions.body = formData;
+    // 将音频 Blob 转换为 Base64
+    const arrayBuffer = await referenceAudio.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    let binaryString = '';
+    for (let i = 0; i < uint8Array.length; i++) {
+      binaryString += String.fromCharCode(uint8Array[i]);
+    }
+    const base64Audio = btoa(binaryString);
+    
+    console.log('[TTS] Audio size:', referenceAudio.size, 'bytes');
+    console.log('[TTS] Base64 length:', base64Audio.length);
+    
+    // 使用 JSON 格式发送请求
+    const requestBody = {
+      text: text.trim(),
+      text_language: voiceConfig.textLanguage,
+      prompt_text: referenceText,
+      prompt_language: voiceConfig.promptLanguage,
+      ref_audio_base64: base64Audio,
+    };
+    
+    requestOptions.headers = {
+      'Accept': 'audio/wav, audio/*, */*',
+      'Content-Type': 'application/json',
+    };
+    requestOptions.body = JSON.stringify(requestBody);
+    
+    console.log('[TTS] Request body keys:', Object.keys(requestBody));
   } else {
     params.append('refer_wav_path', voiceConfig.referWavPath);
     apiUrl = `${apiUrl}?${params.toString()}`;
@@ -206,10 +227,34 @@ export async function textToSpeech(
     hasBody: !!requestOptions.body,
   });
 
-  const response = await fetch(apiUrl, requestOptions);
+  console.log('[TTS] Sending request...');
+  
+  let response: Response;
+  try {
+    response = await fetch(apiUrl, requestOptions);
+  } catch (fetchError) {
+    console.error('[TTS] Fetch error:', fetchError);
+    throw new Error(`网络请求失败: ${fetchError instanceof Error ? fetchError.message : '未知错误'}`);
+  }
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '无法读取错误信息');
+    let errorText = '';
+    try {
+      errorText = await response.text();
+      // 尝试解析为 JSON 获取更详细的错误
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.error('[TTS] API Error (JSON):', errorJson);
+        if (errorJson.detail) {
+          errorText = JSON.stringify(errorJson.detail);
+        }
+      } catch {
+        // 不是 JSON，使用原始文本
+      }
+    } catch {
+      errorText = '无法读取错误信息';
+    }
+    
     console.error('[TTS] Request failed:', {
       status: response.status,
       statusText: response.statusText,
@@ -222,7 +267,12 @@ export async function textToSpeech(
       throw new Error(`TTS API 端点不存在 (404)。请检查 GPT-SoVITS API 端点路径。当前尝试: ${apiUrl}`);
     }
     
-    throw new Error(`TTS 请求失败: ${response.status} - ${errorText.substring(0, 100)}`);
+    // 如果是 422 (Validation Error)，说明参数格式不对
+    if (response.status === 422) {
+      throw new Error(`TTS 参数格式错误 (422): ${errorText}`);
+    }
+    
+    throw new Error(`TTS 请求失败: ${response.status} - ${errorText.substring(0, 200)}`);
   }
 
   const audioBlob = await response.blob();
