@@ -23,6 +23,9 @@ export interface TriggerRect {
 
 export type AIMode = 'remote' | 'ollama';
 
+// 流式文本回調類型
+type StreamChunkCallback = (chunk: string, isComplete: boolean) => void;
+
 interface AIChatContextType {
   isOpen: boolean;
   messages: Message[];
@@ -35,6 +38,8 @@ interface AIChatContextType {
   closeChat: () => void;
   sendMessage: (text: string) => void;
   clearChat: () => void;
+  // 流式文本回調
+  streamChunkCallbackRef: React.MutableRefObject<StreamChunkCallback | null>;
 }
 
 const AIChatContext = createContext<AIChatContextType | undefined>(undefined);
@@ -74,6 +79,9 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   });
   const { language } = useLanguage();
+  
+  // 流式文本回調 ref
+  const streamChunkCallbackRef = useRef<StreamChunkCallback | null>(null);
   
   // 保存模式到localStorage
   useEffect(() => {
@@ -217,8 +225,16 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                     : msg
                 )
               );
+              // 調用流式回調，用於逐句語音合成
+              if (streamChunkCallbackRef.current) {
+                streamChunkCallbackRef.current(chunk, false);
+              }
             }
           );
+          // 流式響應完成，通知回調
+          if (streamChunkCallbackRef.current) {
+            streamChunkCallbackRef.current('', true);
+          }
         } catch (ollamaStreamError) {
           // 如果流式响应失败，尝试普通响应
           console.warn('Ollama 流式响应失败，降级到普通响应:', ollamaStreamError);
@@ -328,8 +344,16 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                     : msg
                 )
               );
+              // 調用流式回調，用於逐句語音合成
+              if (streamChunkCallbackRef.current) {
+                streamChunkCallbackRef.current(chunk, false);
+              }
             }
           );
+          // 流式響應完成，通知回調
+          if (streamChunkCallbackRef.current) {
+            streamChunkCallbackRef.current('', true);
+          }
 
           // 解析建议（如果存在）
           if (fullContent.includes('|||')) {
@@ -445,7 +469,7 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   return (
-    <AIChatContext.Provider value={{ isOpen, messages, isTyping, triggerRect, suggestions, aiMode, setAiMode, openChat, closeChat, sendMessage, clearChat }}>
+    <AIChatContext.Provider value={{ isOpen, messages, isTyping, triggerRect, suggestions, aiMode, setAiMode, openChat, closeChat, sendMessage, clearChat, streamChunkCallbackRef }}>
       {children}
     </AIChatContext.Provider>
   );

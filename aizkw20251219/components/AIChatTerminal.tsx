@@ -5,6 +5,7 @@ import { useAIChat, Message } from '../contexts/AIChatContext';
 import { useVoiceCloner } from '../contexts/VoiceClonerContext';
 import { AudioRecorder } from '../utils/audioRecorder';
 import { SpeechToText, textToSpeech, isSpeechRecognitionSupported } from '../utils/voiceChat';
+import { StreamingTTSManager } from '../utils/streamingTTS';
 import { voiceConfig } from '../src/voiceConfig';
 import { ReferenceTextConfirmDialog } from './ReferenceTextConfirmDialog';
 
@@ -169,7 +170,7 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
 });
 
 export const AIChatTerminal: React.FC = () => {
-  const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode } = useAIChat();
+  const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode, streamChunkCallbackRef } = useAIChat();
   const { setReferenceAudio, setReferenceText, referenceAudio, referenceText } = useVoiceCloner();
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true); // 默认显示，点击输入框后隐藏
@@ -195,6 +196,71 @@ export const AIChatTerminal: React.FC = () => {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const speechToTextRef = useRef<SpeechToText | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const streamingTTSRef = useRef<StreamingTTSManager | null>(null);
+  
+  // 流式語音合成狀態
+  const [ttsStatus, setTtsStatus] = useState<string>('');
+  
+  // 設置流式語音合成回調
+  useEffect(() => {
+    if (!isVoiceChatMode || !referenceAudio) {
+      // 語音模式關閉，清理回調
+      streamChunkCallbackRef.current = null;
+      if (streamingTTSRef.current) {
+        streamingTTSRef.current.stop();
+        streamingTTSRef.current = null;
+      }
+      return;
+    }
+    
+    // 設置流式回調
+    streamChunkCallbackRef.current = async (chunk: string, isComplete: boolean) => {
+      if (!streamingTTSRef.current) {
+        // 創建新的 TTS 管理器
+        streamingTTSRef.current = new StreamingTTSManager(
+          referenceAudio,
+          referenceText || '這是一段參考文本。',
+          (status) => setTtsStatus(status),
+          (error) => console.error('[StreamingTTS] Error:', error)
+        );
+        // 預上傳音頻
+        await streamingTTSRef.current.preUploadAudio();
+        console.log('[StreamingTTS] 管理器已創建並預上傳音頻');
+      }
+      
+      if (isComplete) {
+        // 流結束，處理剩餘文本
+        await streamingTTSRef.current.flush();
+        console.log('[StreamingTTS] 流結束，已 flush');
+      } else if (chunk) {
+        // 添加新的文本片段
+        await streamingTTSRef.current.appendText(chunk);
+      }
+    };
+    
+    return () => {
+      streamChunkCallbackRef.current = null;
+    };
+  }, [isVoiceChatMode, referenceAudio, referenceText, streamChunkCallbackRef]);
+  
+  // 當 AI 回覆完成時重置 TTS 管理器
+  useEffect(() => {
+    if (!isTyping && streamingTTSRef.current) {
+      // AI 回覆完成，等待音頻播放完畢後重置
+      const checkAndReset = () => {
+        if (streamingTTSRef.current) {
+          const status = streamingTTSRef.current.getStatus();
+          if (!status.isPlaying && status.pendingCount === 0 && status.synthesizingCount === 0) {
+            streamingTTSRef.current = null;
+            setTtsStatus('');
+          } else {
+            setTimeout(checkAndReset, 1000);
+          }
+        }
+      };
+      setTimeout(checkAndReset, 2000);
+    }
+  }, [isTyping]);
   
   // 当有新的suggestions时显示
   useEffect(() => {
@@ -879,24 +945,9 @@ export const AIChatTerminal: React.FC = () => {
   // 跟踪已处理的AI消息ID，避免重复转换
   const processedMessageIdsRef = useRef<Set<string>>(new Set());
 
-  // 监听AI回复，自动转换为语音
-  useEffect(() => {
-    if (!isVoiceChatMode || !referenceAudio || messages.length === 0) return;
-    
-    const lastMessage = messages[messages.length - 1];
-    
-    // 如果是AI的回复、不是正在输入中、且未处理过
-    if (
-      lastMessage.role === 'ai' && 
-      !isTyping && 
-      !isSynthesizing && 
-      !isSpeaking &&
-      !processedMessageIdsRef.current.has(lastMessage.id)
-    ) {
-      processedMessageIdsRef.current.add(lastMessage.id);
-      handleSpeakAIResponse(lastMessage.content);
-    }
-  }, [messages, isTyping, isVoiceChatMode, referenceAudio]);
+  // 注意：已改用流式語音合成（StreamingTTSManager）
+  // 不再等待完整回覆，而是逐句合成播放
+  // 舊的整段合成邏輯已移除
 
   // 清理音频资源
   useEffect(() => {
@@ -1312,7 +1363,7 @@ export const AIChatTerminal: React.FC = () => {
                
                {/* 语音状态提示 */}
                <AnimatePresence>
-                 {(isListening || isSynthesizing || isSpeaking) && (
+                 {(isListening || isSynthesizing || isSpeaking || ttsStatus) && (
                    <motion.div
                      initial={{ opacity: 0, y: 5 }}
                      animate={{ opacity: 1, y: 0 }}
@@ -1348,6 +1399,16 @@ export const AIChatTerminal: React.FC = () => {
                            className="w-2 h-2 bg-green-500 rounded-full"
                          />
                          AI正在说话...
+                       </>
+                     )}
+                     {ttsStatus && !isListening && !isSynthesizing && !isSpeaking && (
+                       <>
+                         <motion.div
+                           animate={{ scale: [1, 1.1, 1] }}
+                           transition={{ duration: 0.6, repeat: Infinity }}
+                           className="w-2 h-2 bg-cyan-500 rounded-full"
+                         />
+                         {ttsStatus}
                        </>
                      )}
                    </motion.div>
