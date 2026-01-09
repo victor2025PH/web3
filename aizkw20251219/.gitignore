@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 上傳的音頻文件（用戶隱私）
+uploaded_audio/
