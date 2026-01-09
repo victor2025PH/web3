@@ -17,6 +17,8 @@ import { VoiceCloner } from './components/VoiceCloner';
 import { VoiceClonerDemo } from './components/VoiceClonerDemo';
 import { VoiceClonerProvider } from './contexts/VoiceClonerContext';
 import { config } from './src/config';
+import { WelcomeGuide, useWelcomeGuide } from './components/WelcomeGuide';
+import { FloatingCTA } from './components/FloatingCTA';
 
 // --- Brand Icons Components ---
 const TelegramIcon = ({ className }: { className?: string }) => (
@@ -381,6 +383,7 @@ const LandingContent: React.FC = () => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [activeFeature, setActiveFeature] = useState<{ title: string; desc: string; theme: string } | null>(null);
   const { openChat } = useAIChat();
+  const { shouldShow: showWelcomeGuide, hideGuide } = useWelcomeGuide();
   
   // Rotating Quote Logic
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
@@ -549,6 +552,20 @@ const LandingContent: React.FC = () => {
   return (
     <div className="relative min-h-screen text-zinc-200 selection:bg-cyan-500/30 selection:text-cyan-200 font-sans bg-black">
       
+      {/* 新用戶歡迎引導 */}
+      {showWelcomeGuide && (
+        <WelcomeGuide 
+          onComplete={hideGuide}
+          onTryDemo={() => {
+            hideGuide();
+            // 打開聊天並發送體驗消息
+            setTimeout(() => {
+              openChat('用戶想體驗AI功能', '');
+            }, 300);
+          }}
+        />
+      )}
+      
       {/* Contact Modal */}
       <ContactModal isOpen={showContactModal} onClose={() => setShowContactModal(false)} />
       
@@ -564,6 +581,9 @@ const LandingContent: React.FC = () => {
 
       {/* NEW: Interactive AI Sprite */}
       <AISprite />
+
+      {/* 浮動 CTA 按鈕 */}
+      <FloatingCTA />
 
       {/* Dynamic Background */}
       <Background />
