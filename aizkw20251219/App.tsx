@@ -19,6 +19,9 @@ import { VoiceClonerProvider } from './contexts/VoiceClonerContext';
 import { config } from './src/config';
 import { WelcomeGuide, useWelcomeGuide } from './components/WelcomeGuide';
 import { FloatingCTA } from './components/FloatingCTA';
+import { VIPMembershipModal, useVIPModal } from './components/VIPMembershipModal';
+import { LiveStatsBar } from './components/LiveStatsBar';
+import { QuickActions, FloatingQuickActions } from './components/QuickActions';
 
 // --- Brand Icons Components ---
 const TelegramIcon = ({ className }: { className?: string }) => (
@@ -384,6 +387,7 @@ const LandingContent: React.FC = () => {
   const [activeFeature, setActiveFeature] = useState<{ title: string; desc: string; theme: string } | null>(null);
   const { openChat } = useAIChat();
   const { shouldShow: showWelcomeGuide, hideGuide } = useWelcomeGuide();
+  const { isOpen: isVIPModalOpen, openVIPModal, closeVIPModal } = useVIPModal();
   
   // Rotating Quote Logic
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
@@ -585,6 +589,15 @@ const LandingContent: React.FC = () => {
       {/* 浮動 CTA 按鈕 */}
       <FloatingCTA />
 
+      {/* 浮動快速行動按鈕 */}
+      <FloatingQuickActions />
+
+      {/* VIP 會員彈窗 */}
+      <VIPMembershipModal isOpen={isVIPModalOpen} onClose={closeVIPModal} />
+
+      {/* 實時數據統計條 */}
+      <LiveStatsBar />
+
       {/* Dynamic Background */}
       <Background />
       
@@ -596,6 +609,20 @@ const LandingContent: React.FC = () => {
 
       <main className="relative z-10">
         <Hero />
+
+        {/* 快速行動區塊 */}
+        <section className="relative z-20 -mt-20 pb-16">
+          <div className="max-w-4xl mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <QuickActions />
+            </motion.div>
+          </div>
+        </section>
 
         {/* Section 1: Manifesto */}
         <Section 
