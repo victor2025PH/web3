@@ -588,32 +588,9 @@ export const AISprite: React.FC = () => {
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    // Default Context: Product Recommendation
-                    let triggerPrompt = "用户点击了机器人。你需要扮演产品顾问。首先介绍热门产品，然后询问用户需求（流量/设备/AI），逐步引导用户。";
-                    
-                    const hotProducts = [
-                        "1. 🚀 WhatsApp 官方 API (防封号)",
-                        "2. 📱 云手机集群 (万人群控)",
-                        "3. 🗣️ AI 语音克隆 (拟真度99%)",
-                        "4. 🕸️ Telegram 获客矩阵"
-                    ];
-                    
-                    let aiMsg = `系统核心已连接。我是 EVE。\n\n为您检索到本周 **热门黑科技**：\n\n${hotProducts.join('\n')}\n\n请问您的核心目标是什么？`;
-                    let suggestions = "我要搞流量|我要群控设备|降低人工成本";
-
-                    // Contextual overrides
-                    if (mode === 'idle_news') {
-                        triggerPrompt = `用户对新闻 "${newsText}" 感兴趣，并希望了解相关产品方案。`;
-                        aiMsg = `正在分析资讯流：${newsText}\n\n基于此趋势，我为您推荐以下解决方案：\n\n${hotProducts[0]}\n${hotProducts[3]}\n\n您想深入了解哪一个？`;
-                        suggestions = "了解 WhatsApp|了解 Telegram|其他方案";
-                    } else if (mode === 'idle_dance') {
-                         triggerPrompt = "用户在机器人跳舞时点击。以轻松幽默的口吻推荐转化率最高的产品。";
-                         aiMsg = "系统心情指数：100% ⚡\n\n趁我心情好，给您透露点内部数据。\n目前 **WhatsApp API** 和 **云手机** 的转化率最高。\n\n您想看实测数据吗？";
-                         suggestions = "看转化数据|推荐适合我的|无需推荐";
-                    }
-
-                    const fullMsg = `${aiMsg}|||${suggestions}`;
-                    openChat(triggerPrompt, fullMsg, e.currentTarget as HTMLElement);
+                    // 直接打開聊天窗口，不顯示預設消息
+                    // 讓用戶自己開始對話，或繼續之前的對話
+                    openChat('', '', e.currentTarget as HTMLElement);
                 }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}

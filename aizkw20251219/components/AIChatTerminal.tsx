@@ -277,9 +277,24 @@ export const AIChatTerminal: React.FC = () => {
     }
 
     if (!triggerRect) {
-      // Desktop: Default Center
-      setIsFixed(false);
-      setChatStyle({});
+      // Desktop: Default Center - 仍然啟用固定模式以支持拖動和調整大小
+      setIsFixed(true);
+      
+      // 使用保存的位置和大小，或默認居中
+      const savedSize = customSize || { width: 400, height: 500 };
+      const savedPos = customPosition || { 
+        x: (viewportW - savedSize.width) / 2, 
+        y: (viewportH - savedSize.height) / 2 
+      };
+      
+      setChatStyle({
+        position: 'fixed',
+        top: savedPos.y,
+        left: savedPos.x,
+        width: savedSize.width,
+        height: savedSize.height,
+      });
+      setBeakStyle({ display: 'none' });
       return;
     }
 
@@ -1316,13 +1331,17 @@ export const AIChatTerminal: React.FC = () => {
                   e.stopPropagation();
                   setIsResizing(true);
                 }}
-                className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize group/resize"
-                style={{ 
-                  cursor: 'nwse-resize',
-                  backgroundImage: 'linear-gradient(135deg, transparent 0%, transparent 40%, rgba(6,182,212,0.3) 40%, rgba(6,182,212,0.3) 45%, transparent 45%, transparent 55%, rgba(6,182,212,0.3) 55%, rgba(6,182,212,0.3) 60%, transparent 60%)'
-                }}
+                className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize z-50 group/resize"
+                style={{ cursor: 'nwse-resize' }}
               >
-                <div className="absolute bottom-1 right-1 w-3 h-3 border-r-2 border-b-2 border-cyan-500/30 group-hover/resize:border-cyan-500/60 transition-colors" />
+                {/* 調整大小圖標 - 三條斜線 */}
+                <div className="absolute bottom-1 right-1 w-4 h-4">
+                  <div className="absolute bottom-0 right-0 w-3 h-[2px] bg-cyan-500/50 group-hover/resize:bg-cyan-400 transition-colors transform rotate-[-45deg] origin-right" style={{ bottom: '2px', right: '2px' }} />
+                  <div className="absolute bottom-0 right-0 w-2 h-[2px] bg-cyan-500/50 group-hover/resize:bg-cyan-400 transition-colors transform rotate-[-45deg] origin-right" style={{ bottom: '5px', right: '2px' }} />
+                  <div className="absolute bottom-0 right-0 w-1 h-[2px] bg-cyan-500/50 group-hover/resize:bg-cyan-400 transition-colors transform rotate-[-45deg] origin-right" style={{ bottom: '8px', right: '2px' }} />
+                </div>
+                {/* 備用：簡單的角落指示 */}
+                <div className="absolute bottom-1 right-1 w-3 h-3 border-r-2 border-b-2 border-cyan-500/40 group-hover/resize:border-cyan-400 rounded-br transition-colors" />
               </div>
             )}
           </motion.div>

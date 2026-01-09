@@ -132,12 +132,18 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setTriggerRect(null);
     }
     
-    // If there's a specific trigger (like clicking a button), the AI initiates
+    // 如果已經有對話記錄，不再顯示歡迎消息或觸發消息
+    // 直接打開聊天窗口，繼續之前的對話
+    if (messages.length > 0) {
+      // 保持現有對話，不添加新消息
+      return;
+    }
+    
+    // 只有在沒有對話記錄時，才顯示觸發消息或默認歡迎語
     if (triggerMessage) {
         setIsTyping(true);
         setTimeout(() => {
             setIsTyping(false);
-            // Parse trigger message for suggestions if it was pre-canned with |||
             const parts = triggerMessage.split('|||');
             addMessage('ai', parts[0]);
             if (parts.length > 1) {
@@ -146,15 +152,8 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 setSuggestions(['查看详细报告', '立即部署', '联系人工客服']);
             }
         }, 800);
-    } else if (messages.length === 0) {
-        // Default greeting
-        setIsTyping(true);
-        setTimeout(() => {
-            setIsTyping(false);
-            addMessage('ai', "系统核心已上线。身份验证通过。\n\n我是 AI 智控王的核心中枢。我可以为您解析技术架构、演示群控能力或制定自动化获客策略。");
-            setSuggestions(['如何实现自动获客？', '群控系统多少钱？', '演示全自动成交']);
-        }, 800);
     }
+    // 完全移除默認歡迎語，讓用戶自己開始對話
   };
 
   const closeChat = () => setIsOpen(false);
