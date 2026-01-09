@@ -196,11 +196,16 @@ export class StreamingTTSManager {
         text_split_method: 'cut5',
         media_type: 'wav',
         streaming_mode: false,
-        temperature: 0.8,
-        top_p: 0.9,
-        top_k: 15,
-        speed_factor: 1.0,
-        repetition_penalty: 1.2,
+        // 優化參數 - 讓語音更有感情和自然
+        temperature: 1.0,         // 提高隨機性，增加語調變化
+        top_p: 0.95,              // 更大的採樣範圍
+        top_k: 20,                // 更多選擇，增加自然度
+        speed_factor: 0.95,       // 略微放慢，更自然
+        repetition_penalty: 1.35, // 減少重複，避免單調
+        fragment_interval: 0.3,   // 句子間停頓，更自然
+        seed: -1,                 // 隨機種子
+        parallel_infer: true,     // 並行推理
+        split_bucket: true,       // 分段處理
       };
       
       const response = await fetch(`${apiBaseUrl}/tts`, {
