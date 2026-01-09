@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button } from './ui/Button';
-import { Smartphone, Network } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useAIChat } from '../contexts/AIChatContext';
 
 // Internal Component for Dynamic Stats with Particles
 const DynamicStat = ({ 
@@ -126,7 +123,6 @@ const DynamicStat = ({
 
 export const Hero: React.FC = () => {
   const { t } = useLanguage();
-  const { openChat } = useAIChat();
 
   return (
     <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
@@ -268,22 +264,6 @@ export const Hero: React.FC = () => {
           
         </div>
 
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-30">
-          <Button 
-            variant="primary" 
-            icon 
-            onClick={(e) => openChat("用户请求启动接管程序。", "正在初始化接管序列...\n\n我是系统核心。您希望主宰哪个领域？\n\n- 社交媒体流量\n- 设备控制\n- 语音网络", e.currentTarget)}
-          >
-            {t('hero.btn_deploy')}
-          </Button>
-          <Button 
-            variant="secondary"
-            onClick={(e) => openChat("用户请求查看架构蓝图。", "正在访问蓝图...\n\n显示节点拓扑图。\n\n我们的系统基于去中心化网状网络。您需要技术规格还是收入预测？", e.currentTarget)}
-          >
-            {t('hero.btn_view')}
-          </Button>
-        </div>
 
       </div>
 

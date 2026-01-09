@@ -614,8 +614,8 @@ const LandingContent: React.FC = () => {
       <main className="relative z-10">
         <Hero />
 
-        {/* 快速行動區塊 */}
-        <section className="relative z-20 -mt-20 pb-16">
+        {/* 快速行動區塊 - 下移避免遮擋 */}
+        <section className="relative z-10 mt-24 pb-16">
           <div className="max-w-4xl mx-auto px-4">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
