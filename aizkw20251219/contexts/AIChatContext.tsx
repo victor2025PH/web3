@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { useLanguage } from './LanguageContext';
 import { detectUserLanguage } from '../utils/aiConfig';
 import { sendChatRequest, sendStreamChatRequest, ChatMessage } from '../utils/aiProxy';
