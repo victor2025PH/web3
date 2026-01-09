@@ -22,6 +22,9 @@ import { FloatingCTA } from './components/FloatingCTA';
 import { VIPMembershipModal, useVIPModal } from './components/VIPMembershipModal';
 import { LiveStatsBar } from './components/LiveStatsBar';
 import { QuickActions, FloatingQuickActions } from './components/QuickActions';
+import { CaseStudies } from './components/CaseStudies';
+import { PricingCalculator } from './components/PricingCalculator';
+import { ContactSalesForm, useContactForm } from './components/ContactSalesForm';
 
 // --- Brand Icons Components ---
 const TelegramIcon = ({ className }: { className?: string }) => (
@@ -388,6 +391,7 @@ const LandingContent: React.FC = () => {
   const { openChat } = useAIChat();
   const { shouldShow: showWelcomeGuide, hideGuide } = useWelcomeGuide();
   const { isOpen: isVIPModalOpen, openVIPModal, closeVIPModal } = useVIPModal();
+  const { isOpen: isContactFormOpen, openContactForm, closeContactForm } = useContactForm();
   
   // Rotating Quote Logic
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
@@ -594,6 +598,9 @@ const LandingContent: React.FC = () => {
 
       {/* VIP 會員彈窗 */}
       <VIPMembershipModal isOpen={isVIPModalOpen} onClose={closeVIPModal} />
+
+      {/* 聯繫銷售表單 */}
+      <ContactSalesForm isOpen={isContactFormOpen} onClose={closeContactForm} />
 
       {/* 實時數據統計條 */}
       <LiveStatsBar />
@@ -833,6 +840,26 @@ const LandingContent: React.FC = () => {
             )})}
 
           </motion.div>
+        </Section>
+
+        {/* 案例展示區 */}
+        <Section 
+            id="case-studies" 
+            variant="deep"
+            divider="none"
+            className="py-24"
+        >
+            <CaseStudies />
+        </Section>
+
+        {/* 價格計算器 */}
+        <Section 
+            id="calculator" 
+            variant="glass"
+            divider="slant-bottom"
+            className="py-24"
+        >
+            <PricingCalculator />
         </Section>
 
          {/* Pricing Section (Light Glass) */}
