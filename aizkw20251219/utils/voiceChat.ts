@@ -222,6 +222,12 @@ export async function textToSpeech(
       text_split_method: 'cut5',
       media_type: 'wav',
       streaming_mode: false,
+      // 調整參數讓語音更有感情
+      temperature: 0.8,        // 增加一些隨機性，讓語調更自然
+      top_p: 0.9,              // 控制語調變化
+      top_k: 15,               // 增加選擇範圍
+      speed_factor: 1.0,       // 正常語速
+      repetition_penalty: 1.2, // 減少重複
     };
     
     requestOptions.headers = {
