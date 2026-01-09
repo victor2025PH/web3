@@ -414,22 +414,30 @@ export const AIChatTerminal: React.FC = () => {
   // Handle resize mouse events
   useEffect(() => {
     if (!isResizing || isMobileLayout) return;
+    
+    console.log('[Resize] 調整大小模式啟動');
 
     const handleMouseMove = (e: MouseEvent) => {
-      // 簡化條件：只要在調整大小模式下就處理
-      if (!isFixed) return;
-      
       const container = containerRef.current;
-      if (!container) return;
+      if (!container) {
+        console.log('[Resize] 容器不存在');
+        return;
+      }
 
       const rect = container.getBoundingClientRect();
       const newWidth = Math.max(320, Math.min(1200, e.clientX - rect.left));
       const newHeight = Math.max(350, Math.min(window.innerHeight - 40, e.clientY - rect.top));
 
+      console.log('[Resize] 新尺寸:', newWidth, 'x', newHeight);
+      
       const newSize = { width: newWidth, height: newHeight };
       setCustomSize(newSize);
       
-      // 直接更新樣式
+      // 直接更新容器樣式
+      container.style.width = `${newWidth}px`;
+      container.style.height = `${newHeight}px`;
+      
+      // 同時更新 state
       setChatStyle(prev => ({
         ...prev,
         width: newWidth,
@@ -438,18 +446,18 @@ export const AIChatTerminal: React.FC = () => {
     };
 
     const handleMouseUp = () => {
+      console.log('[Resize] 調整結束');
       setIsResizing(false);
-      // 重置游標樣式
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       
-      // 保存最終大小
       const container = containerRef.current;
       if (container) {
         const rect = container.getBoundingClientRect();
         const finalSize = { width: rect.width, height: rect.height };
         setCustomSize(finalSize);
         localStorage.setItem('ai_chat_window_size', JSON.stringify(finalSize));
+        console.log('[Resize] 保存尺寸:', finalSize);
       }
     };
 
@@ -460,7 +468,7 @@ export const AIChatTerminal: React.FC = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, isFixed, isMobileLayout]);
+  }, [isResizing, isMobileLayout]);
 
   // Save size when it changes
   useEffect(() => {
@@ -1333,29 +1341,27 @@ export const AIChatTerminal: React.FC = () => {
                </AnimatePresence>
             </div>
 
-            {/* Resize Handle - Only show on desktop fixed mode */}
-            {isFixed && !isMobileLayout && (
+            {/* Resize Handle - 始終顯示在桌面模式 */}
+            {!isMobileLayout && (
               <div
                 ref={resizeRef}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  console.log('[Resize] 開始調整大小');
                   setIsResizing(true);
-                  // 添加全局游標樣式
                   document.body.style.cursor = 'nwse-resize';
                   document.body.style.userSelect = 'none';
                 }}
-                className={`absolute bottom-0 right-0 w-10 h-10 z-50 group/resize ${isResizing ? 'bg-cyan-500/20' : ''}`}
-                style={{ cursor: 'nwse-resize' }}
+                className="absolute -bottom-1 -right-1 w-6 h-6 z-[100] cursor-nwse-resize hover:scale-110 transition-transform"
+                title="拖動調整大小"
               >
-                {/* 調整大小圖標 - 簡潔的角落指示 */}
-                <svg 
-                  className="absolute bottom-1 right-1 w-5 h-5 text-cyan-500/60 group-hover/resize:text-cyan-400 transition-colors"
-                  viewBox="0 0 24 24" 
-                  fill="currentColor"
-                >
-                  <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22ZM22 10H20V8H22V10ZM18 14H16V12H18V14ZM14 18H12V16H14V18ZM10 22H8V20H10V22Z" />
-                </svg>
+                {/* 更明顯的調整手柄 */}
+                <div className="w-full h-full bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full shadow-lg flex items-center justify-center hover:from-cyan-400 hover:to-cyan-500">
+                  <svg className="w-3 h-3 text-white" viewBox="0 0 10 10" fill="currentColor">
+                    <path d="M9 1L1 9M9 5L5 9M9 9L9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
+                  </svg>
+                </div>
               </div>
             )}
           </motion.div>
