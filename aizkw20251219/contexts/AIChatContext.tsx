@@ -5,6 +5,7 @@ import { sendChatRequest, sendStreamChatRequest, ChatMessage } from '../utils/ai
 import { sendOllamaStreamRequest, sendOllamaRequest, OllamaChatMessage, checkOllamaAvailable } from '../utils/ollamaProxy';
 import { loadMessages, saveMessages, clearStoredMessages } from '../utils/messageStorage';
 import { getSessionId, updateSessionActivity } from '../utils/sessionManager';
+import { trackEvent } from '../utils/chatAnalytics';
 
 // Message Type
 export interface Message {
@@ -38,6 +39,8 @@ interface AIChatContextType {
   closeChat: () => void;
   sendMessage: (text: string) => void;
   clearChat: () => void;
+  // 停止生成
+  stopGenerating: () => void;
   // 流式文本回調
   streamChunkCallbackRef: React.MutableRefObject<StreamChunkCallback | null>;
 }
@@ -68,20 +71,39 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [isTyping, setIsTyping] = useState(false);
   const [sessionContext, setSessionContext] = useState<string>('');
   const [triggerRect, setTriggerRect] = useState<TriggerRect | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>(['/help', '/status', '/deploy']); // Default initial suggestions
+  const [suggestions, setSuggestions] = useState<string[]>(['Telegram 矩陣詳情', 'AI 數字員工報價', '免費試用申請', '聯繫專屬客服']); // 業務導向的默認建議
   const [aiMode, setAiMode] = useState<AIMode>(() => {
-    // 从localStorage读取保存的模式，默认使用remote
+    // 从localStorage读取保存的模式，默认使用本地 ollama（禁用远程AI）
     try {
       const savedMode = localStorage.getItem('ai_chat_mode');
-      return (savedMode === 'ollama' || savedMode === 'remote') ? savedMode : 'remote';
+      // 强制使用本地 ollama 模式
+      return (savedMode === 'ollama' || savedMode === 'remote') ? savedMode : 'ollama';
     } catch {
-      return 'remote';
+      return 'ollama';
     }
   });
   const { language } = useLanguage();
   
   // 流式文本回調 ref
   const streamChunkCallbackRef = useRef<StreamChunkCallback | null>(null);
+  
+  // 中斷控制器 ref（用於停止生成）
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // 停止生成函數
+  const stopGenerating = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsTyping(false);
+    // 通知流式回調結束
+    if (streamChunkCallbackRef.current) {
+      streamChunkCallbackRef.current('', true);
+    }
+    // 追蹤停止生成事件
+    trackEvent('stop_generating');
+  };
   
   // 保存模式到localStorage
   useEffect(() => {
@@ -127,6 +149,9 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setIsOpen(true);
     setSessionContext(context);
     
+    // 追蹤聊天打開事件
+    trackEvent('chat_open', { context, hasTriggerMessage: !!triggerMessage });
+    
     // Capture element coordinates for positioning
     if (element) {
       const rect = element.getBoundingClientRect();
@@ -164,11 +189,15 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     // 完全移除默認歡迎語，讓用戶自己開始對話
   };
 
-  const closeChat = () => setIsOpen(false);
+  const closeChat = () => {
+    setIsOpen(false);
+    trackEvent('chat_close');
+  };
   const clearChat = () => {
       setMessages([]);
-      setSuggestions(['/help', '/status', '/deploy']);
+      setSuggestions(['Telegram 矩陣詳情', 'AI 數字員工報價', '免費試用申請', '聯繫專屬客服']);
       clearStoredMessages(); // 清除保存的消息
+      trackEvent('clear_chat');
   };
 
   const sendMessage = async (text: string) => {
@@ -176,6 +205,13 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setIsTyping(true);
     // Clear old suggestions while thinking
     setSuggestions([]);
+    
+    // 追蹤消息發送
+    trackEvent('message_sent', { 
+      messageLength: text.length, 
+      aiMode,
+      isCommand: text.startsWith('/'),
+    });
 
     try {
       // 先创建一个空的 AI 消息，用于流式更新
@@ -469,7 +505,7 @@ export const AIChatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   return (
-    <AIChatContext.Provider value={{ isOpen, messages, isTyping, triggerRect, suggestions, aiMode, setAiMode, openChat, closeChat, sendMessage, clearChat, streamChunkCallbackRef }}>
+    <AIChatContext.Provider value={{ isOpen, messages, isTyping, triggerRect, suggestions, aiMode, setAiMode, openChat, closeChat, sendMessage, clearChat, stopGenerating, streamChunkCallbackRef }}>
       {children}
     </AIChatContext.Provider>
   );

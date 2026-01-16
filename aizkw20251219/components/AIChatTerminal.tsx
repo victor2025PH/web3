@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Cpu, Activity, ChevronRight, Sparkles, Command, Terminal, Server, Zap, Maximize2, Minimize2, Upload, Mic, Square, Volume2, VolumeX } from 'lucide-react';
+import { X, Send, Bot, Cpu, Activity, ChevronRight, Sparkles, Command, Terminal, Server, Zap, Maximize2, Minimize2, Upload, Mic, Square, Volume2, VolumeX, StopCircle } from 'lucide-react';
 import { useAIChat, Message } from '../contexts/AIChatContext';
+import { trackEvent } from '../utils/chatAnalytics';
 import { useVoiceCloner } from '../contexts/VoiceClonerContext';
 import { AudioRecorder } from '../utils/audioRecorder';
 import { SpeechToText, textToSpeech, isSpeechRecognitionSupported } from '../utils/voiceChat';
@@ -170,7 +171,7 @@ const ChatMessageItem = React.memo(({ msg }: { msg: Message }) => {
 });
 
 export const AIChatTerminal: React.FC = () => {
-  const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode, streamChunkCallbackRef } = useAIChat();
+  const { isOpen, closeChat, messages, sendMessage, isTyping, triggerRect, clearChat, suggestions, aiMode, setAiMode, stopGenerating, streamChunkCallbackRef } = useAIChat();
   const { setReferenceAudio, setReferenceText, referenceAudio, referenceText } = useVoiceCloner();
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true); // 默认显示，点击输入框后隐藏
@@ -637,6 +638,9 @@ export const AIChatTerminal: React.FC = () => {
   };
 
   const handleCommandClick = (cmd: string) => {
+    // 追蹤建議點擊
+    trackEvent('suggestion_click', { suggestion: cmd, isCommand: cmd.startsWith('/') });
+    
     if (cmd.startsWith('/')) {
         setInput(cmd);
         inputRef.current?.focus();
@@ -1211,6 +1215,18 @@ export const AIChatTerminal: React.FC = () => {
                       <span className="text-xs font-mono text-cyan-400 tracking-wider">
                         PROCESSING_REQUEST<span className="animate-pulse">_</span>
                       </span>
+                      {/* 停止生成按鈕 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          stopGenerating();
+                        }}
+                        className="ml-2 px-2 py-1 text-[10px] font-mono font-bold uppercase bg-red-500/20 border border-red-500/50 text-red-400 rounded hover:bg-red-500/30 hover:text-red-300 transition-all flex items-center gap-1"
+                        title="停止生成"
+                      >
+                        <StopCircle className="w-3 h-3" />
+                        停止
+                      </button>
                    </div>
                 </motion.div>
               )}
@@ -1218,27 +1234,56 @@ export const AIChatTerminal: React.FC = () => {
 
             {/* Input Area */}
             <div className="p-3 bg-zinc-900/80 border-t border-cyan-500/20 rounded-b-xl shrink-0 relative z-30">
-              {/* Compact Suggestions Buttons - Above Input */}
+              {/* 智能快速回復按鈕 - 根據內容類型顯示不同樣式 */}
               <AnimatePresence>
                 {showSuggestions && filteredSuggestions.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 5 }}
-                    className="flex gap-2 mb-2 flex-wrap"
+                    className="flex gap-2 mb-3 flex-wrap"
                   >
-                    {filteredSuggestions.slice(0, 3).map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCommandClick(suggestion);
-                        }}
-                        className="px-3 py-1.5 text-xs font-mono bg-zinc-800/80 border border-cyan-500/30 text-cyan-300 rounded-md hover:bg-cyan-500/20 hover:border-cyan-500/50 hover:text-cyan-200 transition-all"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
+                    {filteredSuggestions.slice(0, 4).map((suggestion, index) => {
+                      // 根據建議內容判斷類型，顯示不同樣式
+                      const isCommand = suggestion.startsWith('/');
+                      const isPrice = suggestion.includes('價格') || suggestion.includes('報價') || suggestion.includes('詳情');
+                      const isTrial = suggestion.includes('試用') || suggestion.includes('體驗') || suggestion.includes('免費');
+                      const isContact = suggestion.includes('客服') || suggestion.includes('聯繫') || suggestion.includes('諮詢');
+                      
+                      let buttonStyle = 'bg-zinc-800/80 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-500/50 hover:text-cyan-200';
+                      let icon = null;
+                      
+                      if (isCommand) {
+                        buttonStyle = 'bg-purple-900/30 border-purple-500/40 text-purple-300 hover:bg-purple-500/20 hover:border-purple-500/60 hover:text-purple-200';
+                        icon = <Terminal className="w-3 h-3" />;
+                      } else if (isTrial) {
+                        buttonStyle = 'bg-green-900/30 border-green-500/40 text-green-300 hover:bg-green-500/20 hover:border-green-500/60 hover:text-green-200';
+                        icon = <Sparkles className="w-3 h-3" />;
+                      } else if (isPrice) {
+                        buttonStyle = 'bg-yellow-900/30 border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/20 hover:border-yellow-500/60 hover:text-yellow-200';
+                        icon = <Activity className="w-3 h-3" />;
+                      } else if (isContact) {
+                        buttonStyle = 'bg-orange-900/30 border-orange-500/40 text-orange-300 hover:bg-orange-500/20 hover:border-orange-500/60 hover:text-orange-200';
+                        icon = <ChevronRight className="w-3 h-3" />;
+                      }
+                      
+                      return (
+                        <motion.button
+                          key={index}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: index * 0.05 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCommandClick(suggestion);
+                          }}
+                          className={`px-3 py-1.5 text-xs font-mono border rounded-md transition-all flex items-center gap-1.5 ${buttonStyle}`}
+                        >
+                          {icon}
+                          {suggestion}
+                        </motion.button>
+                      );
+                    })}
                   </motion.div>
                 )}
               </AnimatePresence>

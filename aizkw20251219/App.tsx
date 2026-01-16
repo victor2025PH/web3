@@ -19,6 +19,7 @@ import { VoiceClonerProvider } from './contexts/VoiceClonerContext';
 import { config } from './src/config';
 import { WelcomeGuide, useWelcomeGuide } from './components/WelcomeGuide';
 import { FloatingCTA } from './components/FloatingCTA';
+import { useAutoGreet } from './hooks/useAutoGreet';
 import { VIPMembershipModal, useVIPModal } from './components/VIPMembershipModal';
 import { LiveStatsBar } from './components/LiveStatsBar';
 import { QuickActions } from './components/QuickActions';
@@ -392,6 +393,14 @@ const LandingContent: React.FC = () => {
   const { shouldShow: showWelcomeGuide, hideGuide } = useWelcomeGuide();
   const { isOpen: isVIPModalOpen, openVIPModal, closeVIPModal } = useVIPModal();
   const { isOpen: isContactFormOpen, openContactForm, closeContactForm } = useContactForm();
+  
+  // 🚀 自動問候功能：用戶登錄後主動彈窗推薦業務
+  // 延遲 5 秒後觸發，每天首次訪問時顯示
+  useAutoGreet({
+    delay: 5000,           // 5 秒延遲，避免打擾頁面加載
+    oncePerDay: true,      // 每天只問候一次
+    newUserOnly: false,    // 對所有用戶啟用（新用戶和回訪用戶使用不同話術）
+  });
   
   // Rotating Quote Logic
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
