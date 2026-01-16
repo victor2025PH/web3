@@ -4,8 +4,9 @@
  * Z-CORE模式：注入系统提示
  */
 
-// Tailscale IP - 安全的虚拟局域网访问
-const OLLAMA_URL = 'http://100.84.60.15:11434/api/chat';
+// Cloudflare Tunnel - 公開互聯網訪問（無需安裝任何客戶端）
+// 注意：每次重啟腳本 URL 會變化，需要運行 setup-cloud-ai.ps1 獲取新 URL
+const OLLAMA_URL = 'https://kid-movers-rolls-length.trycloudflare.com/api/chat';
 const OLLAMA_MODEL = 'huihui_ai/qwen2.5-abliterate'; // 硬编码模型名称
 
 // Z-CORE系统提示 - 优化版：资深黑科技顾问
@@ -206,7 +207,7 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
  */
 export async function checkOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch('http://100.84.60.15:11434/api/tags', {
+    const response = await fetch('https://kid-movers-rolls-length.trycloudflare.com/api/tags', {
       method: 'GET',
       mode: 'cors',
     });
