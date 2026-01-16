@@ -362,28 +362,6 @@ const SystemDetails: React.FC = () => {
   );
 };
 
-const PSYCH_QUOTES = [
-  {
-    id: 1,
-    text: "当您的竞争对手还在手动回复信息、为招聘销售发愁时，您的系统已经完成了第一万次自动成交。这不是竞争，这是维度的超越。",
-    author: "SYSTEM OVERLORD"
-  },
-  {
-    id: 2,
-    text: "真正的自由不是逃避工作，而是拥有无需在场也能自行运转的印钞机。让算法成为您最忠诚的猎手，24小时不知疲倦地为您捕获价值。",
-    author: "PASSIVE INCOME PROTOCOL"
-  },
-  {
-    id: 3,
-    text: "在这个赢家通吃的数字时代，速度就是一切。人类的反应是毫秒级，而您的矩阵是纳秒级。不要试图用血肉之躯去对抗硅基生命的速度。",
-    author: "SILICON SUPREMACY"
-  },
-  {
-    id: 4,
-    text: "平庸的企业通过堆砌人力来寻求增长，伟大的领袖通过构建系统来统治市场。您是在经营一家公司，还是在指挥一支数字化军团？",
-    author: "COMMANDER MODULE"
-  }
-];
 
 const LandingContent: React.FC = () => {
   const { t } = useLanguage();
@@ -402,14 +380,6 @@ const LandingContent: React.FC = () => {
     newUserOnly: false,    // 對所有用戶啟用（新用戶和回訪用戶使用不同話術）
   });
   
-  // Rotating Quote Logic
-  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentQuoteIndex((prev) => (prev + 1) % PSYCH_QUOTES.length);
-    }, 6000); // Rotate every 6 seconds
-    return () => clearInterval(interval);
-  }, []);
 
   // --- Scroll Animation Logic ---
   const trustRef = useRef(null);
@@ -637,75 +607,13 @@ const LandingContent: React.FC = () => {
           </div>
         </section>
 
-        {/* Section 1: Manifesto */}
-        <Section 
-            id="manifesto" 
-            className="py-32" 
-            variant="deep"
-            divider="slant-bottom"
-        >
-          <div className="max-w-5xl mx-auto text-center relative">
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
-               <h2 className="text-[12rem] md:text-[20rem] font-black text-white leading-none tracking-tighter blur-sm select-none">
-                 DOMINATE
-               </h2>
-            </div>
-
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, type: "spring", stiffness: 40 }}
-              className="relative z-10"
-            >
-              <h2 className="text-2xl md:text-3xl font-mono text-cyan-500 mb-8 tracking-[0.5em] uppercase">
-                {t('value.title')}
-              </h2>
-              
-              <div className="relative min-h-[200px] flex flex-col justify-center items-center">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentQuoteIndex}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.6 }}
-                    className="flex flex-col gap-6"
-                    style={{ 
-                      filter: 'blur(0px)',
-                      willChange: 'opacity, transform'
-                    }}
-                  >
-                    <p className="text-3xl md:text-5xl font-bold text-white leading-tight">
-                      "{PSYCH_QUOTES[currentQuoteIndex].text}"
-                    </p>
-                    <div 
-                      className="flex items-center justify-center gap-4 cursor-pointer group hover:scale-105 transition-transform"
-                      onClick={(e) => openChat(`User interested in quote by ${PSYCH_QUOTES[currentQuoteIndex].author}`, `Identity Verified: ${PSYCH_QUOTES[currentQuoteIndex].author}.\n\nThis core philosophy drives our entire automated architecture.\n\nWould you like to know how we apply "Silicon Supremacy" to revenue generation?`, e.currentTarget)}
-                    >
-                       <div className="h-px w-12 bg-cyan-500/50" />
-                       <div className="flex items-center gap-2">
-                         <div className="text-sm font-mono text-cyan-400 tracking-widest uppercase">
-                           {PSYCH_QUOTES[currentQuoteIndex].author}
-                         </div>
-                         <MessageCircle className="w-3 h-3 text-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                       </div>
-                       <div className="h-px w-12 bg-cyan-500/50" />
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          </div>
-        </Section>
-
-        {/* Section 3: Matrix (System Visualizer) - MOVED UP */}
+        {/* Section: Matrix (System Visualizer) */}
         <Section 
             id="matrix" 
             title={t('matrix.title')} 
             subtitle={t('matrix.subtitle')}
             variant="deep"
-            className="pt-40" // Adjust for slant overlap from Manifesto
+            className="pt-20"
         >
           <div className="space-y-12" ref={matrixRef}>
              <motion.div 
