@@ -10,7 +10,6 @@ import { Smartphone, Mic, MessageSquare, Phone, Server, Radio, MessagesSquare, Q
 import { useLanguage } from './contexts/LanguageContext';
 import { AIChatProvider, useAIChat } from './contexts/AIChatContext';
 import { AIChatTerminal } from './components/AIChatTerminal';
-import { Matrix3DScene } from './components/Matrix3DScene';
 import { PricingSection } from './components/PricingSection';
 import { AISprite } from './components/AISprite';
 import { VoiceCloner } from './components/VoiceCloner';
@@ -392,13 +391,6 @@ const LandingContent: React.FC = () => {
   const tY2 = useTransform(trustSpring, [0, 1], [60, -60]); 
   const tY3 = useTransform(trustSpring, [0, 1], [0, -40]);
 
-  const matrixRef = useRef(null);
-  const { scrollYProgress: matrixProgress } = useScroll({
-    target: matrixRef,
-    offset: ["start end", "end start"]
-  });
-  const matrixScale = useTransform(matrixProgress, [0, 0.5], [0.9, 1]);
-  const matrixOpacity = useTransform(matrixProgress, [0, 0.3], [0, 1]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -607,71 +599,7 @@ const LandingContent: React.FC = () => {
           </div>
         </section>
 
-        {/* Section: Matrix (System Visualizer) */}
-        <Section 
-            id="matrix" 
-            title={t('matrix.title')} 
-            subtitle={t('matrix.subtitle')}
-            variant="deep"
-            className="pt-20"
-        >
-          <div className="space-y-12" ref={matrixRef}>
-             <motion.div 
-               style={{ scale: matrixScale, opacity: matrixOpacity }}
-               className="group relative rounded-2xl overflow-hidden border border-white/10 bg-zinc-900/50 hover:border-cyan-500/50 transition-all duration-500 will-change-transform shadow-[0_0_0_0_rgba(0,255,255,0)] hover:shadow-[0_0_40px_-10px_rgba(0,255,255,0.2)]"
-             >
-                 <div className="grid md:grid-cols-2 gap-0">
-                    {/* Full Height Matrix Scene */}
-                    <div 
-                      onClick={(e) => openChat("User accessed Matrix View.", "Accessing Real-Time Monitor...\n\nThis is the digital heartbeat of your operation. Every node represents an active automated process.\n\nView node logs?", e.currentTarget)}
-                      className="h-[600px] bg-zinc-950 relative overflow-hidden flex items-center justify-center cursor-pointer group/grid border-r border-white/5"
-                    >
-                       <Matrix3DScene />
-                    </div>
-                    
-                    <div className="p-12 flex flex-col justify-center bg-black/80 backdrop-blur-xl relative">
-                       {/* Decorative Lines */}
-                       <div className="absolute top-0 right-0 w-32 h-32 border-t-2 border-r-2 border-cyan-500/20 rounded-tr-3xl pointer-events-none" />
-                       <div className="absolute bottom-0 left-0 w-32 h-32 border-b-2 border-l-2 border-cyan-500/20 rounded-bl-3xl pointer-events-none" />
-
-                       <div className="font-mono text-cyan-500 text-xs mb-6 flex items-center gap-2">
-                          <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse shadow-[0_0_10px_#00FFFF]"></span>
-                          {t('matrix.active')}
-                       </div>
-                       
-                       <h3 className="text-4xl md:text-5xl font-bold text-white mb-8 tracking-tight">
-                         {t('matrix.card_title')}
-                       </h3>
-                       <p className="text-xl text-zinc-400 mb-10 leading-relaxed font-light">
-                         {t('matrix.card_desc')}
-                       </p>
-                       
-                       <div className="flex flex-wrap gap-3 mb-10">
-                          {[t('matrix.t1'), t('matrix.t2'), t('matrix.t3'), t('matrix.t4')].map(tag => (
-                            <span 
-                              key={tag} 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openChat(`User queried component: ${tag}`, `Component Analysis: ${tag}\n\nCritical architecture module. Maintains high availability & throughput.\n\nDeploy independent instance?`, e.currentTarget)
-                              }}
-                              className="px-4 py-2 text-xs font-mono uppercase bg-zinc-900 border border-zinc-700 text-zinc-300 cursor-pointer hover:bg-cyan-950 hover:border-cyan-500 hover:text-cyan-400 transition-colors"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                       </div>
-                       <div className="flex gap-4">
-                         <Button variant="primary" onClick={(e) => openChat("User requested demo access.", "Command Center Locked.\n\nGenerating temp access token...\n\nInitiate live stream demo?", e.currentTarget)}>
-                           {t('matrix.btn_demo')}
-                         </Button>
-                       </div>
-                    </div>
-                 </div>
-              </motion.div>
-          </div>
-        </Section>
-
-        {/* Section 3: Capabilities (Deep Black with Grid) */}
+        {/* Section: Capabilities (Deep Black with Grid) */}
         <Section 
             id="capabilities" 
             title={t('capabilities.title')} 
