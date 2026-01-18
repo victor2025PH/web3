@@ -372,10 +372,10 @@ const LandingContent: React.FC = () => {
   const { isOpen: isContactFormOpen, openContactForm, closeContactForm } = useContactForm();
   
   // 🚀 自動問候功能：用戶登錄後主動彈窗推薦業務
-  // 延遲 5 秒後觸發，每天首次訪問時顯示
+  // 延遲 3 秒後觸發，每次刷新都顯示
   useAutoGreet({
-    delay: 5000,           // 5 秒延遲，避免打擾頁面加載
-    oncePerDay: true,      // 每天只問候一次
+    delay: 3000,           // 3 秒延遲，頁面加載後快速彈出
+    oncePerDay: false,     // 每次刷新都彈出
     newUserOnly: false,    // 對所有用戶啟用（新用戶和回訪用戶使用不同話術）
   });
   

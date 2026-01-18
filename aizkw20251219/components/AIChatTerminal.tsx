@@ -334,7 +334,7 @@ export const AIChatTerminal: React.FC = () => {
             width: '100%',
             height: '80vh',
             maxHeight: '80vh',
-            zIndex: 60,
+            zIndex: 9999,
             borderBottomLeftRadius: 0,
             borderBottomRightRadius: 0,
             borderTop: '1px solid rgba(6,182,212,0.4)',
@@ -455,7 +455,7 @@ export const AIChatTerminal: React.FC = () => {
       width,
       height,
       maxHeight: 'none',
-      zIndex: 60
+      zIndex: 9999
     });
     setBeakStyle(customPosition ? { display: 'none' } : beakS);
 
@@ -1023,9 +1023,9 @@ export const AIChatTerminal: React.FC = () => {
     <AnimatePresence>
       {isOpen && (
         <>
-        <div className="fixed inset-0 z-[50] bg-black/20 backdrop-blur-sm" onClick={closeChat} />
+        <div className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm" onClick={closeChat} />
 
-        <div className={!isFixed ? "fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none" : ""} >
+        <div className={!isFixed ? "fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none" : ""} >
           <motion.div
             ref={containerRef}
             variants={containerVariants}
@@ -1033,7 +1033,7 @@ export const AIChatTerminal: React.FC = () => {
             animate="visible"
             exit="exit"
             style={isFixed ? chatStyle : { pointerEvents: 'auto', width: '100%', maxWidth: '400px', height: '500px' }}
-            className={`flex flex-col bg-zinc-950/95 border border-cyan-500/40 rounded-xl shadow-[0_0_80px_-20px_rgba(0,255,255,0.3)] backdrop-blur-xl overflow-visible relative ${!isFixed ? 'pointer-events-auto' : ''}`}
+            className={`flex flex-col bg-zinc-950 border border-cyan-500/40 rounded-xl shadow-[0_0_80px_-20px_rgba(0,255,255,0.3)] backdrop-blur-xl overflow-visible relative z-[9999] ${!isFixed ? 'pointer-events-auto' : ''}`}
           >
             {isFixed && !isMobileLayout && (
                 <svg 
