@@ -4,9 +4,9 @@
  * Z-CORE模式：注入系统提示
  */
 
-// Tailscale 內網連接 - 穩定可靠，不會變更 URL
-// 確保本地和遠程設備都已登入同一個 Tailscale 帳戶
-const OLLAMA_URL = 'http://100.84.60.15:11434/api/chat';
+// Tailscale Funnel - 公開 HTTPS 訪問（穩定 URL，不會變更）
+// 需要在本機運行：tailscale funnel 11434
+const OLLAMA_URL = 'https://ms-defysomwqybz.tail05a567.ts.net/api/chat';
 const OLLAMA_MODEL = 'huihui_ai/qwen2.5-abliterate'; // 硬编码模型名称
 
 // Z-CORE系统提示 - 优化版：资深黑科技顾问
@@ -207,7 +207,7 @@ export async function sendOllamaRequest(request: OllamaChatRequest): Promise<str
  */
 export async function checkOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch('http://100.84.60.15:11434/api/tags', {
+    const response = await fetch('https://ms-defysomwqybz.tail05a567.ts.net/api/tags', {
       method: 'GET',
       mode: 'cors',
     });
